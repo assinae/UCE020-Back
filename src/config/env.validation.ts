@@ -11,8 +11,32 @@ export const envValidationSchema = Joi.object({
   // JWT_SECRET:     Joi.string().min(32).required(),
   // JWT_EXPIRES_IN: Joi.string().default('7d'),
   // FRONTEND_URL:   Joi.string().uri().required(),
-  // MAIL_HOST:      Joi.string().required(),
-  // MAIL_PORT:      Joi.number().required(),
-  // MAIL_USER:      Joi.string().required(),
-  // MAIL_PASS:      Joi.string().required(),
+  EMAIL_PROVIDER: Joi.string().valid('brevo', 'smtp').default('brevo'),
+  BREVO_API_KEY: Joi.when('EMAIL_PROVIDER', {
+    is: 'brevo',
+    then: Joi.string().required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
+  MAIL_FROM: Joi.string().email().required(),
+  MAIL_FROM_NAME: Joi.string().default('Suporte Assinaê'),
+  MAIL_HOST: Joi.when('EMAIL_PROVIDER', {
+    is: 'smtp',
+    then: Joi.string().required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
+  MAIL_PORT: Joi.when('EMAIL_PROVIDER', {
+    is: 'smtp',
+    then: Joi.number().required(),
+    otherwise: Joi.number().allow('').optional(),
+  }),
+  MAIL_USER: Joi.when('EMAIL_PROVIDER', {
+    is: 'smtp',
+    then: Joi.string().required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
+  MAIL_PASS: Joi.when('EMAIL_PROVIDER', {
+    is: 'smtp',
+    then: Joi.string().required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
 });
