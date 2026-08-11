@@ -36,7 +36,7 @@ export class EmailService {
     const fromEmail = this.getRequiredConfig('MAIL_FROM');
     const fromName = this.configService.get<string>(
       'MAIL_FROM_NAME',
-      'Suporte Assinae',
+      'Suporte Assinaê',
     );
 
     if (!apiKey) {
@@ -75,7 +75,7 @@ export class EmailService {
     const fromEmail = this.getRequiredConfig('MAIL_FROM');
     const fromName = this.configService.get<string>(
       'MAIL_FROM_NAME',
-      'Suporte Assinae',
+      'Suporte Assinaê',
     );
 
     const transporter = nodemailer.createTransport({

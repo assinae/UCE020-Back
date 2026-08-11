@@ -18,7 +18,7 @@ export const envValidationSchema = Joi.object({
     otherwise: Joi.string().allow('').optional(),
   }),
   MAIL_FROM: Joi.string().email().required(),
-  MAIL_FROM_NAME: Joi.string().default('Suporte Assinae'),
+  MAIL_FROM_NAME: Joi.string().default('Suporte Assinaê'),
   MAIL_HOST: Joi.when('EMAIL_PROVIDER', {
     is: 'smtp',
     then: Joi.string().required(),

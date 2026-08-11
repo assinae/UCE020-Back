@@ -69,13 +69,13 @@ export class AuthService {
     try {
       await this.emailService.send({
         to: registerDto.email,
-        subject: 'Confirme seu cadastro - Assinae',
+        subject: 'Confirme seu cadastro - Assinaê',
         html: `
           <div style="font-family: sans-serif; padding: 20px;">
-            <h2>Bem-vindo ao Assinae!</h2>
-            <p>Seu codigo de confirmacao e:</p>
+            <h2>Bem-vindo ao Assinaê!</h2>
+            <p>Seu código de confirmação é:</p>
             <h1 style="letter-spacing: 5px; color: #4F46E5;">${verificationCode}</h1>
-            <p>Este codigo expira em 15 minutos.</p>
+            <p>Este código expira em 15 minutos.</p>
             <p>
               <a href="${link}" style="color: #4F46E5;">
                 Clique aqui para confirmar
@@ -166,11 +166,11 @@ export class AuthService {
 
     await this.emailService.send({
       to: user.email,
-      subject: 'Recuperacao de Senha',
+      subject: 'Recuperação de Senha',
       html: `
-        <p>Ola, ${user.nome}!</p>
-        <p>Voce solicitou a alteracao de sua senha.</p>
-        <p>Clique no link abaixo para cadastrar uma nova senha (valido por 15 minutos):</p>
+        <p>Olá, ${user.nome}!</p>
+        <p>Você solicitou a alteração da sua senha.</p>
+        <p>Clique no link abaixo para cadastrar uma nova senha (válido por 15 minutos):</p>
         <a href="${resetLink}" target="_blank">${resetLink}</a>
       `,
     });
