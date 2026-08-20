@@ -34,7 +34,6 @@ import databaseConfig from '../../config/database.config';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    // '*path' e não '*': o Express 5 (Nest 11) exige curinga nomeado.
     consumer.apply(RequestLoggerMiddleware).forRoutes('*path');
   }
 }
