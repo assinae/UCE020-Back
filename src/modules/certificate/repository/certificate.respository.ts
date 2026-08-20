@@ -313,13 +313,6 @@ export class CertificateRepository {
     return db.insert(tabelaCertificadoConvidado).values(rows).returning();
   }
 
-  async setGuestCertificateFile(certificateId: number, arquivoPdf: string) {
-    await db
-      .update(tabelaCertificadoConvidado)
-      .set({ arquivoPdf })
-      .where(eq(tabelaCertificadoConvidado.id, certificateId));
-  }
-
   async findEventForCertificate(eventoId: number) {
     const [evento] = await db
       .select({
@@ -393,13 +386,6 @@ export class CertificateRepository {
   ) {
     if (!rows.length) return [];
     return db.insert(tabelaCertificadoEvento).values(rows).returning();
-  }
-
-  async setUserCertificateFile(certificateId: number, arquivoPdf: string) {
-    await db
-      .update(tabelaCertificadoEvento)
-      .set({ arquivoPdf })
-      .where(eq(tabelaCertificadoEvento.id, certificateId));
   }
 
   // ======================================================================

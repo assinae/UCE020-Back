@@ -6,10 +6,6 @@ import {
 } from '@nestjs/common';
 import { assertEventOrganizer } from 'src/common/helpers/assert-event-organizer.helper';
 import { CertificateRepository } from './repository/certificate.respository';
-import { CertificateFileStorageService } from './storage/certificate-file-storage.service';
-import { renderGuestCertificatePdf } from './pdf/guest-certificate.pdf';
-import { renderParticipantCertificatePdf } from './pdf/participant-certificate.pdf';
-import { formatDateRange } from './pdf/format-date-range';
 import {
   mapGuestRole as mapGuestRoleShared,
   mapParticipantRole,
@@ -17,10 +13,7 @@ import {
 
 @Injectable()
 export class CertificateService {
-  constructor(
-    private readonly repo: CertificateRepository,
-    private readonly fileStorage: CertificateFileStorageService,
-  ) {}
+  constructor(private readonly repo: CertificateRepository) {}
 
   // certificate.service.ts
   async getCertificatesByEvent(eventoId: number, page: number, limit: number) {
@@ -91,17 +84,14 @@ export class CertificateService {
       );
     }
 
+    // A linha do certificado E o certificado: como nao ha mais arquivo para
+    // gerar, emitir e so inserir. Por isso a idempotencia passou a olhar a
+    // existencia da linha, e nao mais a presenca de arquivo_pdf — que agora
+    // e sempre nulo e faria o sistema reemitir para todo mundo a cada chamada.
     const existing =
       await this.repo.findExistingGuestCertificatesByActivity(atividadeId);
     const existingByConvidadoId = new Map(
-      existing
-        .filter((cert) => cert.arquivoPdf)
-        .map((cert) => [cert.convidadoId, cert]),
-    );
-    const existingWithoutFileByConvidadoId = new Map(
-      existing
-        .filter((cert) => !cert.arquivoPdf)
-        .map((cert) => [cert.convidadoId, cert]),
+      existing.map((cert) => [cert.convidadoId, cert]),
     );
     const pending = guests.filter(
       (guest) => !existingByConvidadoId.has(guest.convidadoId),
@@ -109,65 +99,24 @@ export class CertificateService {
 
     const dataEmissao = new Date();
     const created = await this.repo.insertGuestCertificates(
-      pending
-        .filter(
-          (guest) => !existingWithoutFileByConvidadoId.has(guest.convidadoId),
-        )
-        .map((guest) => ({
-          convidadoId: guest.convidadoId,
-          atividadeId,
-          dataEmissao,
-        })),
+      pending.map((guest) => ({
+        convidadoId: guest.convidadoId,
+        atividadeId,
+        dataEmissao,
+      })),
     );
     const createdByConvidadoId = new Map(
       created.map((cert) => [cert.convidadoId, cert]),
     );
 
-    for (const guest of pending) {
-      const cert =
-        existingWithoutFileByConvidadoId.get(guest.convidadoId) ??
-        createdByConvidadoId.get(guest.convidadoId);
-      if (!cert) continue;
-
-      const pdf = await renderGuestCertificatePdf({
-        certificateId: cert.id,
-        guestName: guest.nome,
-        role: this.mapGuestRole(guest.funcao),
-        eventName: atividade.eventoNome,
-        activityName: atividade.nome,
-        workloadHours: atividade.cargaHoraria,
-        location: atividade.localizacao,
-        eventDate: formatDateRange(atividade.dataInicio, atividade.dataFim),
-        issueDate: cert.dataEmissao,
-        assinante1Nome: atividade.assinante1Nome ?? undefined,
-        assinante1Titulo: atividade.assinante1Titulo ?? undefined,
-        assinante2Nome: atividade.assinante2Nome ?? undefined,
-        assinante2Titulo: atividade.assinante2Titulo ?? undefined,
-      });
-      const fileUrl = await this.fileStorage.saveGuestCertificatePdf(
-        cert.id,
-        guest.nome,
-        atividade.nome,
-        pdf,
-      );
-      try {
-        await this.repo.setGuestCertificateFile(cert.id, fileUrl);
-      } catch (error) {
-        await this.fileStorage.remove(fileUrl);
-        throw error;
-      }
-      cert.arquivoPdf = fileUrl;
-    }
-
     return {
-      message: `${pending.length} certificado(s) de convidado emitido(s).`,
+      message: `${created.length} certificado(s) de convidado emitido(s).`,
       data: {
-        issued: pending.length,
+        issued: created.length,
         alreadyIssued: existingByConvidadoId.size,
         certificates: guests.map((guest) => {
           const cert =
             createdByConvidadoId.get(guest.convidadoId) ??
-            existingWithoutFileByConvidadoId.get(guest.convidadoId) ??
             existingByConvidadoId.get(guest.convidadoId)!;
 
           return {
@@ -177,7 +126,6 @@ export class CertificateService {
             role: this.mapGuestRole(guest.funcao),
             alreadyIssued: existingByConvidadoId.has(guest.convidadoId),
             issueDate: cert.dataEmissao.toISOString(),
-            fileUrl: cert.arquivoPdf ?? undefined,
           };
         }),
       },
@@ -205,17 +153,14 @@ export class CertificateService {
       );
     }
 
+    // A linha do certificado E o certificado: como nao ha mais arquivo para
+    // gerar, emitir e so inserir. Por isso a idempotencia passou a olhar a
+    // existencia da linha, e nao mais a presenca de arquivo_pdf — que agora
+    // e sempre nulo e faria o sistema reemitir para todo mundo a cada chamada.
     const existing =
       await this.repo.findExistingUserCertificatesByEvent(eventoId);
     const existingByUsuarioId = new Map(
-      existing
-        .filter((cert) => cert.arquivoPdf)
-        .map((cert) => [cert.usuarioId, cert]),
-    );
-    const existingWithoutFileByUsuarioId = new Map(
-      existing
-        .filter((cert) => !cert.arquivoPdf)
-        .map((cert) => [cert.usuarioId, cert]),
+      existing.map((cert) => [cert.usuarioId, cert]),
     );
     const pending = participacoes.filter(
       (participacao) => !existingByUsuarioId.has(participacao.usuarioId),
@@ -223,65 +168,24 @@ export class CertificateService {
 
     const dataEmissao = new Date();
     const created = await this.repo.insertUserCertificates(
-      pending
-        .filter(
-          (participacao) =>
-            !existingWithoutFileByUsuarioId.has(participacao.usuarioId),
-        )
-        .map((participacao) => ({
-          usuarioId: participacao.usuarioId,
-          eventoId,
-          dataEmissao,
-        })),
+      pending.map((participacao) => ({
+        usuarioId: participacao.usuarioId,
+        eventoId,
+        dataEmissao,
+      })),
     );
     const createdByUsuarioId = new Map(
       created.map((cert) => [cert.usuarioId, cert]),
     );
 
-    for (const participacao of pending) {
-      const cert =
-        existingWithoutFileByUsuarioId.get(participacao.usuarioId) ??
-        createdByUsuarioId.get(participacao.usuarioId);
-      if (!cert) continue;
-
-      const pdf = await renderParticipantCertificatePdf({
-        certificateId: cert.id,
-        participantName: participacao.nome,
-        role: this.mapRole(participacao.tipo),
-        eventName: evento.nome,
-        workloadHours: evento.cargaHoraria,
-        location: evento.localizacao,
-        eventDate: formatDateRange(evento.dataInicio, evento.dataFim),
-        issueDate: cert.dataEmissao,
-        assinante1Nome: evento.assinante1Nome ?? undefined,
-        assinante1Titulo: evento.assinante1Titulo ?? undefined,
-        assinante2Nome: evento.assinante2Nome ?? undefined,
-        assinante2Titulo: evento.assinante2Titulo ?? undefined,
-      });
-      const fileUrl = await this.fileStorage.saveParticipantCertificatePdf(
-        cert.id,
-        evento.nome,
-        participacao.nome,
-        pdf,
-      );
-      try {
-        await this.repo.setUserCertificateFile(cert.id, fileUrl);
-      } catch (error) {
-        await this.fileStorage.remove(fileUrl);
-        throw error;
-      }
-      cert.arquivoPdf = fileUrl;
-    }
-
     return {
-      message: `${pending.length} certificado(s) emitido(s).`,
+      message: `${created.length} certificado(s) emitido(s).`,
       data: {
-        issued: pending.length,
+        issued: created.length,
         alreadyIssued: existingByUsuarioId.size,
         certificates: participacoes.map((participacao) => {
           const cert =
             createdByUsuarioId.get(participacao.usuarioId) ??
-            existingWithoutFileByUsuarioId.get(participacao.usuarioId) ??
             existingByUsuarioId.get(participacao.usuarioId)!;
 
           return {
@@ -291,7 +195,6 @@ export class CertificateService {
             role: this.mapRole(participacao.tipo),
             alreadyIssued: existingByUsuarioId.has(participacao.usuarioId),
             issueDate: cert.dataEmissao.toISOString(),
-            fileUrl: cert.arquivoPdf ?? undefined,
           };
         }),
       },
