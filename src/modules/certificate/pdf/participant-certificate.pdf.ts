@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Document, Page, Text, View, Image, pdf } from '@react-pdf/renderer';
 import { streamToBuffer }       from './stream-to-buffer';
 import { certificateStyles as styles } from './certificate.styles';
+import { formatDate } from './format-date-range';
 import { LOGO_ASSINAE_SRC, LOGO_UEFS_SRC } from 'src/resources/certificatesConfig/certificate.assets';
 
 export type ParticipantCertificateData = {
@@ -134,7 +135,7 @@ function buildDocument(data: ParticipantCertificateData) {
 
         // Rodapé (Atualizado com as novas classes de simetria)
         e(View, { style: styles.footerSection },
-          e(Text, { style: styles.footerLeft }, `Emitido em ${data.issueDate.toLocaleDateString('pt-BR')}`),
+          e(Text, { style: styles.footerLeft }, `Emitido em ${formatDate(data.issueDate)}`),
           e(Text, { style: styles.footerCenter }, 'Universidade Estadual de Feira de Santana — UEFS'),
           e(Text, { style: styles.footerRight }, `Certificado nº ${data.certificateId}`),
         ),
