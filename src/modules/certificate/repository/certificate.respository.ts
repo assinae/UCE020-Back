@@ -60,6 +60,55 @@ export interface CertificadoVerificado {
   hashVerificacao: string | null;
 }
 
+/**
+ * Dados completos para re-renderizar o PDF de um certificado de participante.
+ * usuarioId/eventoId voltam junto porque a autorização do download depende
+ * deles (dono do certificado ou organizador do evento).
+ */
+export interface EventoCertParaRender {
+  id: number;
+  usuarioId: number;
+  eventoId: number;
+  dataEmissao: Date;
+  participantName: string;
+  role: string;
+  eventName: string;
+  workloadHours: number | null;
+  location: string;
+  dataInicio: Date;
+  dataFim: Date;
+  assinante1Nome: string | null;
+  assinante1Titulo: string | null;
+  assinante2Nome: string | null;
+  assinante2Titulo: string | null;
+  assinado: boolean;
+  assinadoEm: Date | null;
+  assinaturaNome: string | null;
+  codigoVerificacao: string | null;
+}
+
+/** Idem, para certificado de convidado (ligado a uma atividade). */
+export interface ConvidadoCertParaRender {
+  id: number;
+  eventoId: number;
+  dataEmissao: Date;
+  guestName: string;
+  role: string;
+  eventName: string;
+  activityName: string;
+  workloadHours: number | null;
+  location: string;
+  dataInicio: Date;
+  dataFim: Date;
+  assinante1Nome: string | null;
+  assinante1Titulo: string | null;
+  assinante2Nome: string | null;
+  assinante2Titulo: string | null;
+  assinado: boolean;
+  assinadoEm: Date | null;
+  assinaturaNome: string | null;
+  codigoVerificacao: string | null;
+}
 @Injectable()
 export class CertificateRepository {
   private userCertificateQuery(condition: SQL) {
@@ -223,10 +272,10 @@ export class CertificateRepository {
         dataFim: tabelaAtividade.dataFim,
         eventoId: tabelaAtividade.eventoId,
         eventoNome: tabelaEvento.nome,
-        assinante1Nome:   tabelaEvento.assinante1Nome,   
-        assinante1Titulo: tabelaEvento.assinante1Titulo, 
-        assinante2Nome:   tabelaEvento.assinante2Nome,   
-        assinante2Titulo: tabelaEvento.assinante2Titulo, 
+        assinante1Nome: tabelaEvento.assinante1Nome,
+        assinante1Titulo: tabelaEvento.assinante1Titulo,
+        assinante2Nome: tabelaEvento.assinante2Nome,
+        assinante2Titulo: tabelaEvento.assinante2Titulo,
       })
       .from(tabelaAtividade)
       .innerJoin(tabelaEvento, eq(tabelaAtividade.eventoId, tabelaEvento.id))
@@ -281,9 +330,9 @@ export class CertificateRepository {
         localizacao: tabelaEvento.localizacao,
         dataInicio: tabelaEvento.dataInicio,
         dataFim: tabelaEvento.dataFim,
-        assinante1Nome:   tabelaEvento.assinante1Nome,   
-        assinante1Titulo: tabelaEvento.assinante1Titulo, 
-        assinante2Nome:   tabelaEvento.assinante2Nome,   
+        assinante1Nome: tabelaEvento.assinante1Nome,
+        assinante1Titulo: tabelaEvento.assinante1Titulo,
+        assinante2Nome: tabelaEvento.assinante2Nome,
         assinante2Titulo: tabelaEvento.assinante2Titulo,
       })
       .from(tabelaEvento)
@@ -306,7 +355,10 @@ export class CertificateRepository {
       )
       .leftJoin(
         tabelaParticipacoesAtividades,
-        eq(tabelaParticipacoes.id, tabelaParticipacoesAtividades.participacaoId),
+        eq(
+          tabelaParticipacoes.id,
+          tabelaParticipacoesAtividades.participacaoId,
+        ),
       )
       .where(
         and(
@@ -317,9 +369,9 @@ export class CertificateRepository {
               eq(tabelaParticipacoesAtividades.presente, true),
             ),
             eq(tabelaParticipacoes.tipo, 'organizador'),
-            eq(tabelaParticipacoes.tipo, 'monitor')
-          )
-        )
+            eq(tabelaParticipacoes.tipo, 'monitor'),
+          ),
+        ),
       )
       .groupBy(
         tabelaUsuario.id,
@@ -442,10 +494,7 @@ export class CertificateRepository {
         tabelaAtividade,
         eq(tabelaCertificadoConvidado.atividadeId, tabelaAtividade.id),
       )
-      .innerJoin(
-        tabelaEvento,
-        eq(tabelaAtividade.eventoId, tabelaEvento.id),
-      )
+      .innerJoin(tabelaEvento, eq(tabelaAtividade.eventoId, tabelaEvento.id))
       .innerJoin(
         tabelaConvidado,
         eq(tabelaCertificadoConvidado.convidadoId, tabelaConvidado.id),
@@ -580,5 +629,133 @@ export class CertificateRepository {
     if (convidado) return { tipo: 'convidado', ...convidado };
 
     return null;
+  }
+
+  /**
+   * Dados completos de UM certificado de participante para render sob demanda.
+   * Diferente de findEventCertificatesToSign, traz também os assinantes do
+   * evento e o estado da assinatura — o PDF é montado inteiro a partir daqui,
+   * sem depender de arquivo salvo.
+   */
+  async findEventCertificateForRender(
+    certificateId: number,
+  ): Promise<EventoCertParaRender | undefined> {
+    const [row] = await db
+      .select({
+        id: tabelaCertificadoEvento.id,
+        usuarioId: tabelaCertificadoEvento.usuarioId,
+        eventoId: tabelaCertificadoEvento.eventoId,
+        dataEmissao: tabelaCertificadoEvento.dataEmissao,
+        participantName: tabelaUsuario.nome,
+        role: tabelaParticipacoes.tipo,
+        eventName: tabelaEvento.nome,
+        workloadHours: tabelaEvento.cargaHoraria,
+        location: tabelaEvento.localizacao,
+        dataInicio: tabelaEvento.dataInicio,
+        dataFim: tabelaEvento.dataFim,
+        assinante1Nome: tabelaEvento.assinante1Nome,
+        assinante1Titulo: tabelaEvento.assinante1Titulo,
+        assinante2Nome: tabelaEvento.assinante2Nome,
+        assinante2Titulo: tabelaEvento.assinante2Titulo,
+        assinado: tabelaCertificadoEvento.assinado,
+        assinadoEm: tabelaCertificadoEvento.assinadoEm,
+        assinaturaNome: tabelaCertificadoEvento.assinaturaNome,
+        codigoVerificacao: tabelaCertificadoEvento.codigoVerificacao,
+      })
+      .from(tabelaCertificadoEvento)
+      .innerJoin(
+        tabelaUsuario,
+        eq(tabelaCertificadoEvento.usuarioId, tabelaUsuario.id),
+      )
+      .innerJoin(
+        tabelaEvento,
+        eq(tabelaCertificadoEvento.eventoId, tabelaEvento.id),
+      )
+      .innerJoin(
+        tabelaParticipacoes,
+        and(
+          eq(tabelaParticipacoes.usuarioId, tabelaCertificadoEvento.usuarioId),
+          eq(tabelaParticipacoes.eventoId, tabelaCertificadoEvento.eventoId),
+        ),
+      )
+      .where(eq(tabelaCertificadoEvento.id, certificateId));
+
+    return row;
+  }
+
+  /** Idem, para certificado de convidado. */
+  async findGuestCertificateForRender(
+    certificateId: number,
+  ): Promise<ConvidadoCertParaRender | undefined> {
+    const [row] = await db
+      .select({
+        id: tabelaCertificadoConvidado.id,
+        eventoId: tabelaAtividade.eventoId,
+        dataEmissao: tabelaCertificadoConvidado.dataEmissao,
+        guestName: tabelaConvidado.nome,
+        role: tabelaConvidadoAtividade.funcao,
+        eventName: tabelaEvento.nome,
+        activityName: tabelaAtividade.nome,
+        workloadHours: tabelaAtividade.cargaHoraria,
+        location: tabelaAtividade.localizacao,
+        dataInicio: tabelaAtividade.dataInicio,
+        dataFim: tabelaAtividade.dataFim,
+        assinante1Nome: tabelaEvento.assinante1Nome,
+        assinante1Titulo: tabelaEvento.assinante1Titulo,
+        assinante2Nome: tabelaEvento.assinante2Nome,
+        assinante2Titulo: tabelaEvento.assinante2Titulo,
+        assinado: tabelaCertificadoConvidado.assinado,
+        assinadoEm: tabelaCertificadoConvidado.assinadoEm,
+        assinaturaNome: tabelaCertificadoConvidado.assinaturaNome,
+        codigoVerificacao: tabelaCertificadoConvidado.codigoVerificacao,
+      })
+      .from(tabelaCertificadoConvidado)
+      .innerJoin(
+        tabelaAtividade,
+        eq(tabelaCertificadoConvidado.atividadeId, tabelaAtividade.id),
+      )
+      .innerJoin(tabelaEvento, eq(tabelaAtividade.eventoId, tabelaEvento.id))
+      .innerJoin(
+        tabelaConvidado,
+        eq(tabelaCertificadoConvidado.convidadoId, tabelaConvidado.id),
+      )
+      .innerJoin(
+        tabelaConvidadoAtividade,
+        and(
+          eq(
+            tabelaConvidadoAtividade.convidadoId,
+            tabelaCertificadoConvidado.convidadoId,
+          ),
+          eq(
+            tabelaConvidadoAtividade.atividadeId,
+            tabelaCertificadoConvidado.atividadeId,
+          ),
+        ),
+      )
+      .where(eq(tabelaCertificadoConvidado.id, certificateId));
+
+    return row;
+  }
+
+  /**
+   * Diz de fato se o usuario e organizador do evento.
+   *
+   * Existe separado de assertEventOrganizer porque o helper tem um bug
+   * conhecido: o adminCheck e um array (sempre truthy), entao o
+   * ForbiddenException nunca dispara e ele nao bloqueia ninguem.
+   */
+  async isEventOrganizer(userId: number, eventoId: number): Promise<boolean> {
+    const [row] = await db
+      .select({ usuarioId: tabelaParticipacoes.usuarioId })
+      .from(tabelaParticipacoes)
+      .where(
+        and(
+          eq(tabelaParticipacoes.usuarioId, userId),
+          eq(tabelaParticipacoes.eventoId, eventoId),
+          eq(tabelaParticipacoes.tipo, 'organizador'),
+        ),
+      );
+
+    return Boolean(row);
   }
 }
