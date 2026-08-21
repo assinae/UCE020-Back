@@ -1,5 +1,11 @@
 import 'dotenv/config';
 import * as schema from './schema';
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 
-export const db = drizzle(process.env.DATABASE_URL!, { schema });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  options: '-c timezone=America/Bahia',
+});
+
+export const db = drizzle(pool, { schema });

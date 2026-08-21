@@ -5,6 +5,7 @@ import {
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Response } from 'express';
+import { serializeBahiaDates } from 'src/common/helpers/bahia-date.helper';
 
 interface ResponseShape<T> {
   data: T;
@@ -25,13 +26,13 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ResponseShape<
           return {
             statusCode,
             message: String(responseBody.message),
-            data: responseBody.data as T,
+            data: serializeBahiaDates(responseBody.data) as T,
           };
         }
 
         return {
           statusCode,
-          data: body as T,
+          data: serializeBahiaDates(body) as T,
         };
       }),
     );
