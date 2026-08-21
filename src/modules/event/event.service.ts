@@ -310,11 +310,19 @@ export class EventService {
 
     await assertEventOrganizer(userId, eventoExistente.id);
 
-    const { atividades, ...dadosEvento } = updateEventDto;
+    const { atividades, dataInicio, dataFim, ...dadosEvento } = updateEventDto;
 
     const [eventoAtualizado] = await db
       .update(tabelaEvento)
-      .set(dadosEvento as Partial<typeof tabelaEvento.$inferInsert>)
+      .set({
+        ...dadosEvento,
+        ...(dataInicio !== undefined && {
+          dataInicio: parseEventDate(dataInicio),
+        }),
+        ...(dataFim !== undefined && {
+          dataFim: parseEventDate(dataFim),
+        }),
+      })
       .where(eq(tabelaEvento.id, id))
       .returning();
 
