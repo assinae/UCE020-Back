@@ -1,4 +1,3 @@
-// src/modules/certificate/certificate-pdf.service.ts
 import {
   ForbiddenException,
   Injectable,
@@ -16,7 +15,6 @@ import {
   urlVerificacao,
 } from './signature/signature-format';
 
-/** Dados de assinatura tal como estão gravados no certificado. */
 interface EstadoAssinatura {
   assinado: boolean;
   assinadoEm: Date | null;
@@ -29,14 +27,7 @@ export interface CertificadoPdf {
   filename: string;
 }
 
-/**
- * Gera o PDF do certificado sob demanda, a partir do banco.
- *
- * Não lê nem escreve arquivo: tudo que o template precisa (dados do evento,
- * do titular e da assinatura) já está em colunas, então o PDF é derivado no
- * momento do download. Isso mantém o documento sempre coerente com o banco —
- * ao contrário do arquivo salvo, que congela no estado da emissão.
- */
+/** Monta o PDF no momento do download, a partir das colunas do banco. */
 @Injectable()
 export class CertificatePdfService {
   constructor(private readonly repo: CertificateRepository) {}
@@ -61,8 +52,6 @@ export class CertificatePdfService {
       throw new NotFoundException('Certificado não encontrado.');
     }
 
-    // O dono baixa o próprio certificado direto; qualquer outra pessoa
-    // precisa ser organizadora do evento.
     if (cert.usuarioId !== userId) {
       await this.assertOrganizador(userId, cert.eventoId);
     }
@@ -98,8 +87,7 @@ export class CertificatePdfService {
       throw new NotFoundException('Certificado não encontrado.');
     }
 
-    // Convidado não é usuário do sistema, então não existe "dono" que possa
-    // baixar: só organizador do evento.
+    // Convidado não é usuário do sistema: não há "dono" que possa baixar.
     await this.assertOrganizador(userId, cert.eventoId);
 
     const buffer = await renderGuestCertificatePdf({
@@ -139,12 +127,6 @@ export class CertificatePdfService {
     }
   }
 
-  /**
-   * Reconstrói o bloco de assinatura a partir das colunas gravadas. O QR é
-   * regerado do codigo_verificacao — o mesmo código produz sempre o mesmo QR.
-   * Se o certificado ainda não foi assinado, devolve undefined e o template
-   * renderiza sem o bloco, igual ao PDF da emissão.
-   */
   private async montarAssinatura(cert: EstadoAssinatura) {
     if (!cert.assinado || !cert.assinadoEm || !cert.codigoVerificacao) {
       return undefined;

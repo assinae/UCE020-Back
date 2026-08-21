@@ -1,4 +1,3 @@
-// src/modules/certificate/controller/certificate-pdf.controller.ts
 import { Controller, Get, Param, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import {
@@ -16,15 +15,11 @@ import { JwtAuthGuard } from 'src/modules/auth/jwt/jwt-auth.guard';
 import { User } from 'src/common/decorators/usuario.decorator';
 import type { JwtPayload } from 'src/common/types/jwt-payload.type';
 
-/** Remove o que o sistema de arquivos e o header não aceitam. */
 function sanitizeFilename(nome: string): string {
   return nome.replace(/[/\\?%*:|"<>]/g, '').trim();
 }
 
-/**
- * Monta o Content-Disposition com as duas formas: `filename` sem acento, para
- * clientes antigos, e `filename*` em UTF-8, que é o que os navegadores usam.
- */
+/** Duas formas: `filename` sem acento para clientes antigos, `filename*` em UTF-8. */
 function contentDisposition(nome: string): string {
   const limpo = sanitizeFilename(nome);
   const ascii = limpo
@@ -66,10 +61,8 @@ export class CertificatePdfController {
     const { buffer, filename } =
       await this.certificatePdfService.buildCertificatePdf(id, user.sub);
 
-    // @Res() desliga o ResponseInterceptor de propósito: ele envelopa o retorno
-    // em { statusCode, data }, o que transformaria o binário do PDF em JSON.
-    // É a única rota da API que não segue o envelope padrão — por isso a exceção
-    // está explicitada aqui.
+    // @Res() desliga o ResponseInterceptor de propósito: o envelope
+    // { statusCode, data } corromperia o binário do PDF.
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.setHeader('Content-Length', buffer.length);

@@ -1,9 +1,3 @@
-// src/modules/certificate/certificate-roles.ts
-//
-// Tradução dos papéis do banco para o rótulo impresso no certificado.
-// Fica aqui porque emissão, assinatura em lote e geração sob demanda precisam
-// imprimir exatamente o mesmo rótulo — três cópias divergiriam.
-
 const PARTICIPANTE: Record<string, string> = {
   participante: 'Ouvinte',
   monitor: 'Monitor',

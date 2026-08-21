@@ -60,11 +60,7 @@ export interface CertificadoVerificado {
   hashVerificacao: string | null;
 }
 
-/**
- * Dados completos para re-renderizar o PDF de um certificado de participante.
- * usuarioId/eventoId voltam junto porque a autorização do download depende
- * deles (dono do certificado ou organizador do evento).
- */
+/** usuarioId/eventoId voltam junto porque a autorização do download depende deles. */
 export interface EventoCertParaRender {
   id: number;
   usuarioId: number;
@@ -87,7 +83,6 @@ export interface EventoCertParaRender {
   codigoVerificacao: string | null;
 }
 
-/** Idem, para certificado de convidado (ligado a uma atividade). */
 export interface ConvidadoCertParaRender {
   id: number;
   eventoId: number;
@@ -313,13 +308,6 @@ export class CertificateRepository {
     return db.insert(tabelaCertificadoConvidado).values(rows).returning();
   }
 
-  async setGuestCertificateFile(certificateId: number, arquivoPdf: string) {
-    await db
-      .update(tabelaCertificadoConvidado)
-      .set({ arquivoPdf })
-      .where(eq(tabelaCertificadoConvidado.id, certificateId));
-  }
-
   async findEventForCertificate(eventoId: number) {
     const [evento] = await db
       .select({
@@ -393,13 +381,6 @@ export class CertificateRepository {
   ) {
     if (!rows.length) return [];
     return db.insert(tabelaCertificadoEvento).values(rows).returning();
-  }
-
-  async setUserCertificateFile(certificateId: number, arquivoPdf: string) {
-    await db
-      .update(tabelaCertificadoEvento)
-      .set({ arquivoPdf })
-      .where(eq(tabelaCertificadoEvento.id, certificateId));
   }
 
   // ======================================================================
@@ -631,12 +612,6 @@ export class CertificateRepository {
     return null;
   }
 
-  /**
-   * Dados completos de UM certificado de participante para render sob demanda.
-   * Diferente de findEventCertificatesToSign, traz também os assinantes do
-   * evento e o estado da assinatura — o PDF é montado inteiro a partir daqui,
-   * sem depender de arquivo salvo.
-   */
   async findEventCertificateForRender(
     certificateId: number,
   ): Promise<EventoCertParaRender | undefined> {
@@ -683,7 +658,6 @@ export class CertificateRepository {
     return row;
   }
 
-  /** Idem, para certificado de convidado. */
   async findGuestCertificateForRender(
     certificateId: number,
   ): Promise<ConvidadoCertParaRender | undefined> {

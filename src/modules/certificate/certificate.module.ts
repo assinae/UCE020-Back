@@ -3,8 +3,6 @@ import { Module } from '@nestjs/common';
 import { CertificateService } from './certificate.service';
 import { AuthModule } from '../auth/auth.module';
 import { CertificateRepository } from './repository/certificate.respository';
-import { CertificateFileStorageService } from './storage/certificate-file-storage.service';
-import { SupabaseStorageModule } from 'src/common/storage/supabase-storage.module';
 import { CertificateMeController } from './controller/certificate-me.controller';
 import { CertificateController } from './controller/certificate.controller';
 import { CertificateGuestController } from './controller/certificate-guest.controller';
@@ -17,7 +15,7 @@ import { CertificateSignatureController } from './signature/certificate-signatur
 import { CertificateVerificationController } from './signature/certificate-verification.controller';
 
 @Module({
-  imports: [AuthModule, SupabaseStorageModule],
+  imports: [AuthModule],
   // A ordem importa: rotas mais específicas primeiro. CertificateMeController
   // (`certificate/me`) e CertificatePdfController (`certificate/:id/pdf`) ficam
   // antes de CertificateDetailController (`certificate/:id`) para não serem
@@ -36,7 +34,6 @@ import { CertificateVerificationController } from './signature/certificate-verif
     CertificateService,
     CertificatePdfService,
     CertificateRepository,
-    CertificateFileStorageService,
     CertificateSignatureService,
   ],
 })
