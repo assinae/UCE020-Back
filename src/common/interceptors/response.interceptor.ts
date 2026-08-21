@@ -1,6 +1,8 @@
 import {
-  Injectable, NestInterceptor,
-  ExecutionContext, CallHandler,
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -14,15 +16,28 @@ interface ResponseShape<T> {
 }
 
 @Injectable()
-export class ResponseInterceptor<T> implements NestInterceptor<T, ResponseShape<T>> {
-  intercept(context: ExecutionContext, next: CallHandler<T>): Observable<ResponseShape<T>> {
-    const statusCode = context.switchToHttp().getResponse<Response>().statusCode;
-    
+export class ResponseInterceptor<T> implements NestInterceptor<
+  T,
+  ResponseShape<T>
+> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler<T>,
+  ): Observable<ResponseShape<T>> {
+    const statusCode = context
+      .switchToHttp()
+      .getResponse<Response>().statusCode;
+
     return next.handle().pipe(
-      map(body => {
+      map((body) => {
         const responseBody = body as Record<string, unknown>;
 
-        if (responseBody && typeof responseBody === 'object' && 'message' in responseBody && 'data' in responseBody) {
+        if (
+          responseBody &&
+          typeof responseBody === 'object' &&
+          'message' in responseBody &&
+          'data' in responseBody
+        ) {
           return {
             statusCode,
             message: String(responseBody.message),

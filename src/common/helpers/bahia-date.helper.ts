@@ -29,13 +29,13 @@ export function formatBahiaDate(date: Date): string {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}.${parts.fractionalSecond ?? '000'}${offset}`;
 }
 
-export function serializeBahiaDates<T>(value: T): T {
+export function serializeBahiaDates(value: unknown): unknown {
   if (value instanceof Date) {
-    return formatBahiaDate(value) as T;
+    return formatBahiaDate(value);
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => serializeBahiaDates(item)) as T;
+    return value.map((item) => serializeBahiaDates(item));
   }
 
   if (value && typeof value === 'object') {
@@ -44,7 +44,7 @@ export function serializeBahiaDates<T>(value: T): T {
         key,
         serializeBahiaDates(item),
       ]),
-    ) as T;
+    );
   }
 
   return value;
