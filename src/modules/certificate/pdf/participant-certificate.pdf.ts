@@ -1,47 +1,51 @@
 import * as React from 'react';
 import { Document, Page, Text, View, Image, pdf } from '@react-pdf/renderer';
-import { streamToBuffer }       from './stream-to-buffer';
+import { streamToBuffer } from './stream-to-buffer';
 import { certificateStyles as styles } from './certificate.styles';
-import { LOGO_ASSINAE_SRC, LOGO_UEFS_SRC } from 'src/resources/certificatesConfig/certificate.assets';
+import { formatDate } from './format-date-range';
+import {
+  LOGO_ASSINAE_SRC,
+  LOGO_UEFS_SRC,
+} from 'src/resources/certificatesConfig/certificate.assets';
 
 export type ParticipantCertificateData = {
-  certificateId:     number;
-  participantName:   string;
-  role:              string;
-  eventName:         string;
-  workloadHours?:    number | null;
-  location:          string;
-  eventDate:         string;
-  issueDate:         Date;
-  assinante1Nome?:   string;
+  certificateId: number;
+  participantName: string;
+  role: string;
+  eventName: string;
+  workloadHours?: number | null;
+  location: string;
+  eventDate: string;
+  issueDate: Date;
+  assinante1Nome?: string;
   assinante1Titulo?: string;
-  assinante2Nome?:   string;
+  assinante2Nome?: string;
   assinante2Titulo?: string;
   // Dados da assinatura digital (preenchidos no ato da assinatura).
   assinatura?: {
-    nome:   string;
-    data:   string; // data/hora formatada
+    nome: string;
+    data: string; // data/hora formatada
     codigo: string;
-    qr?:    { data: Buffer; format: 'png' };
+    qr?: { data: Buffer; format: 'png' };
   };
 };
 
 const ROLE_CERT_TITLE: Record<string, string> = {
-  Ouvinte:     'CERTIFICADO DE PARTICIPAÇÃO',
-  Monitor:     'CERTIFICADO DE MONITORIA',
+  Ouvinte: 'CERTIFICADO DE PARTICIPAÇÃO',
+  Monitor: 'CERTIFICADO DE MONITORIA',
   Organizador: 'CERTIFICADO DE ORGANIZAÇÃO',
 };
 
 const ROLE_VERB: Record<string, string> = {
-  Ouvinte:     'participou do evento',
-  Monitor:     'atuou como monitor no evento',
+  Ouvinte: 'participou do evento',
+  Monitor: 'atuou como monitor no evento',
   Organizador: 'atuou como organizador do evento',
 };
 
 function buildDocument(data: ParticipantCertificateData) {
   const e = React.createElement;
   const certTitle = ROLE_CERT_TITLE[data.role] ?? 'CERTIFICADO DE PARTICIPAÇÃO';
-  const roleVerb  = ROLE_VERB[data.role]       ?? 'participou do evento';
+  const roleVerb = ROLE_VERB[data.role] ?? 'participou do evento';
 
   return e(
     Document,
@@ -203,7 +207,7 @@ function buildDocument(data: ParticipantCertificateData) {
           e(
             Text,
             { style: styles.footerLeft },
-            `Emitido em ${data.issueDate.toLocaleDateString('pt-BR', { timeZone: 'America/Bahia' })}`,
+            `Emitido em ${formatDate(data.issueDate)}`,
           ),
           e(
             Text,

@@ -8,21 +8,9 @@ import { renderGuestCertificatePdf } from '../pdf/guest-certificate.pdf';
 import { formatDateRange } from '../pdf/format-date-range';
 import { gerarAssinatura, normalizarCodigo } from './verification-hash';
 import { gerarQrPng } from './qr';
+import { formatarDataHoraAssinatura, urlVerificacao } from './signature-format';
+import { mapGuestRole, mapParticipantRole } from '../certificate-roles';
 import { formatBahiaDate } from 'src/common/helpers/bahia-date.helper';
-
-const PUBLIC_BASE_URL =
-  process.env.PUBLIC_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3001}`;
-
-const ROLE_PARTICIPANTE: Record<string, string> = {
-  participante: 'Ouvinte',
-  monitor: 'Monitor',
-  organizador: 'Organizador',
-};
-const ROLE_CONVIDADO: Record<string, string> = {
-  palestrante: 'Palestrante',
-  ministrante: 'Ministrante',
-  moderador: 'Moderador',
-};
 
 @Injectable()
 export class CertificateSignatureService {
@@ -30,26 +18,6 @@ export class CertificateSignatureService {
     private readonly repo: CertificateRepository,
     private readonly fileStorage: CertificateFileStorageService,
   ) {}
-
-  private urlVerificacao(codigo: string): string {
-    // QR aponta para a rota do FRONT: {FRONTEND_URL}/certificate/verify/{codigo}
-    // Pode ser sobrescrito por CERTIFICATE_VERIFY_URL.
-    const frontBase = (process.env.FRONTEND_URL ?? PUBLIC_BASE_URL).replace(
-      /\/$/,
-      '',
-    );
-    const base =
-      process.env.CERTIFICATE_VERIFY_URL ?? `${frontBase}/certificate/verify`;
-    return `${base.replace(/\/$/, '')}/${codigo}`;
-  }
-
-  private formatarDataHora(data: Date): string {
-    return new Intl.DateTimeFormat('pt-BR', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-      timeZone: 'America/Bahia',
-    }).format(data);
-  }
 
   /**
    * Assina EM LOTE os certificados do evento (participantes + convidados).
@@ -101,12 +69,12 @@ export class CertificateSignatureService {
         dataEmissao: cert.dataEmissao,
       });
       const assinadoEm = new Date();
-      const qr = await gerarQrPng(this.urlVerificacao(codigo));
+      const qr = await gerarQrPng(urlVerificacao(codigo));
 
       const pdf = await renderParticipantCertificatePdf({
         certificateId: cert.id,
         participantName: cert.participantName,
-        role: ROLE_PARTICIPANTE[cert.role] ?? cert.role,
+        role: mapParticipantRole(cert.role),
         eventName: cert.eventName,
         workloadHours: cert.workloadHours,
         location: cert.location,
@@ -114,7 +82,7 @@ export class CertificateSignatureService {
         issueDate: cert.dataEmissao,
         assinatura: {
           nome: assinanteNome,
-          data: this.formatarDataHora(assinadoEm),
+          data: formatarDataHoraAssinatura(assinadoEm),
           codigo,
           qr: qr ? { data: qr, format: 'png' } : undefined,
         },
@@ -168,12 +136,12 @@ export class CertificateSignatureService {
         dataEmissao: cert.dataEmissao,
       });
       const assinadoEm = new Date();
-      const qr = await gerarQrPng(this.urlVerificacao(codigo));
+      const qr = await gerarQrPng(urlVerificacao(codigo));
 
       const pdf = await renderGuestCertificatePdf({
         certificateId: cert.id,
         guestName: cert.guestName,
-        role: ROLE_CONVIDADO[cert.role] ?? cert.role,
+        role: mapGuestRole(cert.role),
         eventName: cert.eventName,
         activityName: cert.activityName,
         workloadHours: cert.workloadHours,
@@ -182,7 +150,7 @@ export class CertificateSignatureService {
         issueDate: cert.dataEmissao,
         assinatura: {
           nome: assinanteNome,
-          data: this.formatarDataHora(assinadoEm),
+          data: formatarDataHoraAssinatura(assinadoEm),
           codigo,
           qr: qr ? { data: qr, format: 'png' } : undefined,
         },

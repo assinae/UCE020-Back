@@ -10,6 +10,10 @@ import { CertificateFileStorageService } from './storage/certificate-file-storag
 import { renderGuestCertificatePdf } from './pdf/guest-certificate.pdf';
 import { renderParticipantCertificatePdf } from './pdf/participant-certificate.pdf';
 import { formatDateRange } from './pdf/format-date-range';
+import {
+  mapGuestRole as mapGuestRoleShared,
+  mapParticipantRole,
+} from './certificate-roles';
 import { formatBahiaDate } from 'src/common/helpers/bahia-date.helper';
 
 @Injectable()
@@ -30,7 +34,10 @@ export class CertificateService {
     const [kind, idPart] = rawId.split('-');
     const certificateId = Number(idPart);
 
-    if ((kind !== 'guest' && kind !== 'user') || !Number.isInteger(certificateId)) {
+    if (
+      (kind !== 'guest' && kind !== 'user') ||
+      !Number.isInteger(certificateId)
+    ) {
       throw new NotFoundException('Certificado não encontrado.');
     }
 
@@ -105,8 +112,7 @@ export class CertificateService {
     const created = await this.repo.insertGuestCertificates(
       pending
         .filter(
-          (guest) =>
-            !existingWithoutFileByConvidadoId.has(guest.convidadoId),
+          (guest) => !existingWithoutFileByConvidadoId.has(guest.convidadoId),
         )
         .map((guest) => ({
           convidadoId: guest.convidadoId,
@@ -134,9 +140,9 @@ export class CertificateService {
         location: atividade.localizacao,
         eventDate: formatDateRange(atividade.dataInicio, atividade.dataFim),
         issueDate: cert.dataEmissao,
-        assinante1Nome:   atividade.assinante1Nome ?? undefined,
+        assinante1Nome: atividade.assinante1Nome ?? undefined,
         assinante1Titulo: atividade.assinante1Titulo ?? undefined,
-        assinante2Nome:   atividade.assinante2Nome ?? undefined,
+        assinante2Nome: atividade.assinante2Nome ?? undefined,
         assinante2Titulo: atividade.assinante2Titulo ?? undefined,
       });
       const fileUrl = await this.fileStorage.saveGuestCertificatePdf(
@@ -248,9 +254,9 @@ export class CertificateService {
         location: evento.localizacao,
         eventDate: formatDateRange(evento.dataInicio, evento.dataFim),
         issueDate: cert.dataEmissao,
-        assinante1Nome:   evento.assinante1Nome ?? undefined,
+        assinante1Nome: evento.assinante1Nome ?? undefined,
         assinante1Titulo: evento.assinante1Titulo ?? undefined,
-        assinante2Nome:   evento.assinante2Nome ?? undefined,
+        assinante2Nome: evento.assinante2Nome ?? undefined,
         assinante2Titulo: evento.assinante2Titulo ?? undefined,
       });
       const fileUrl = await this.fileStorage.saveParticipantCertificatePdf(
@@ -331,20 +337,10 @@ export class CertificateService {
   }
 
   private mapRole(role: string): string {
-    const map: Record<string, string> = {
-      participante: 'Ouvinte',
-      monitor: 'Monitor',
-      organizador: 'Organizador',
-    };
-    return map[role.toLowerCase()] ?? role;
+    return mapParticipantRole(role);
   }
 
   private mapGuestRole(funcao: string): string {
-    const map: Record<string, string> = {
-      palestrante: 'Palestrante',
-      ministrante: 'Ministrante',
-      moderador: 'Moderador',
-    };
-    return map[funcao.toLowerCase()] ?? funcao;
+    return mapGuestRoleShared(funcao);
   }
 }
