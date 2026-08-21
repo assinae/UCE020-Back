@@ -17,7 +17,7 @@ export class ParticipationService {
     }
 
     const dateParts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Sao_Paulo',
+      timeZone: 'America/Bahia',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -33,7 +33,7 @@ export class ParticipationService {
 
     const offsetName =
       new Intl.DateTimeFormat('en-US', {
-        timeZone: 'America/Sao_Paulo',
+        timeZone: 'America/Bahia',
         timeZoneName: 'shortOffset',
       })
         .formatToParts(date)

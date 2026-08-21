@@ -8,6 +8,7 @@ import { renderGuestCertificatePdf } from '../pdf/guest-certificate.pdf';
 import { formatDateRange } from '../pdf/format-date-range';
 import { gerarAssinatura, normalizarCodigo } from './verification-hash';
 import { gerarQrPng } from './qr';
+import { formatBahiaDate } from 'src/common/helpers/bahia-date.helper';
 
 const PUBLIC_BASE_URL =
   process.env.PUBLIC_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3001}`;
@@ -46,7 +47,7 @@ export class CertificateSignatureService {
     return new Intl.DateTimeFormat('pt-BR', {
       dateStyle: 'short',
       timeStyle: 'short',
-      timeZone: 'America/Sao_Paulo',
+      timeZone: 'America/Bahia',
     }).format(data);
   }
 
@@ -250,8 +251,8 @@ export class CertificateSignatureService {
         tipo: cert.tipo,
         titular: cert.titular,
         referente: cert.contexto,
-        emitidoEm: cert.dataEmissao.toISOString(),
-        assinadoEm: cert.assinadoEm.toISOString(),
+        emitidoEm: formatBahiaDate(cert.dataEmissao),
+        assinadoEm: formatBahiaDate(cert.assinadoEm),
         assinadoPor: cert.assinaturaNome,
         hash: cert.hashVerificacao,
       },
