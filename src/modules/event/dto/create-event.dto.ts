@@ -1,7 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsString,
-  IsDate,
+  IsDateString,
   Min,
   IsInt,
   IsOptional,
@@ -31,13 +31,11 @@ export class CreateEventDto {
   @Min(0)
   cargaHoraria!: number;
 
-  @Type(() => Date)
-  @IsDate()
-  dataInicio!: Date;
+  @IsDateString()
+  dataInicio!: string;
 
-  @Type(() => Date)
-  @IsDate()
-  dataFim!: Date;
+  @IsDateString()
+  dataFim!: string;
 
   @IsEnum(['pendente', 'iniciada', 'andamento', 'finalizada'])
   status!: 'pendente' | 'iniciada' | 'andamento' | 'finalizada';
