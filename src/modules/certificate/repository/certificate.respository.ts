@@ -60,11 +60,7 @@ export interface CertificadoVerificado {
   hashVerificacao: string | null;
 }
 
-/**
- * Dados completos para re-renderizar o PDF de um certificado de participante.
- * usuarioId/eventoId voltam junto porque a autorização do download depende
- * deles (dono do certificado ou organizador do evento).
- */
+/** usuarioId/eventoId voltam junto porque a autorização do download depende deles. */
 export interface EventoCertParaRender {
   id: number;
   usuarioId: number;
@@ -87,7 +83,6 @@ export interface EventoCertParaRender {
   codigoVerificacao: string | null;
 }
 
-/** Idem, para certificado de convidado (ligado a uma atividade). */
 export interface ConvidadoCertParaRender {
   id: number;
   eventoId: number;
@@ -617,12 +612,6 @@ export class CertificateRepository {
     return null;
   }
 
-  /**
-   * Dados completos de UM certificado de participante para render sob demanda.
-   * Diferente de findEventCertificatesToSign, traz também os assinantes do
-   * evento e o estado da assinatura — o PDF é montado inteiro a partir daqui,
-   * sem depender de arquivo salvo.
-   */
   async findEventCertificateForRender(
     certificateId: number,
   ): Promise<EventoCertParaRender | undefined> {
@@ -669,7 +658,6 @@ export class CertificateRepository {
     return row;
   }
 
-  /** Idem, para certificado de convidado. */
   async findGuestCertificateForRender(
     certificateId: number,
   ): Promise<ConvidadoCertParaRender | undefined> {

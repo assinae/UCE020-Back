@@ -10,10 +10,9 @@ export class CertificateSignatureService {
 
   /**
    * Assina EM LOTE os certificados do evento (participantes + convidados).
-   * Grava apenas as colunas de assinatura: o PDF é montado no download, a
-   * partir delas, então não há arquivo para regerar nem subir aqui.
    *
-   * @param force quando true, reassina também os já assinados (regera o PDF).
+   * @param force reassina os já assinados, gerando código e hash novos — o que
+   * invalida os QR Codes já distribuídos.
    */
   async signEventCertificates(eventoId: number, userId: number, force = false) {
     await assertEventOrganizer(userId, eventoId);
@@ -43,10 +42,8 @@ export class CertificateSignatureService {
       codigoVerificacao: string;
     }[] = [];
 
-    // Uma data para o lote inteiro: a assinatura aconteceu num momento so.
     const assinadoEm = new Date();
 
-    // ---- Certificados de participante ----
     for (const cert of eventoCerts) {
       const { codigo, hash } = gerarAssinatura({
         tipo: 'evento',
@@ -72,7 +69,6 @@ export class CertificateSignatureService {
       });
     }
 
-    // ---- Certificados de convidado ----
     for (const cert of convidadoCerts) {
       const { codigo, hash } = gerarAssinatura({
         tipo: 'convidado',

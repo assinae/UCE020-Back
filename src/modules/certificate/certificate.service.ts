@@ -84,10 +84,8 @@ export class CertificateService {
       );
     }
 
-    // A linha do certificado E o certificado: como nao ha mais arquivo para
-    // gerar, emitir e so inserir. Por isso a idempotencia passou a olhar a
-    // existencia da linha, e nao mais a presenca de arquivo_pdf — que agora
-    // e sempre nulo e faria o sistema reemitir para todo mundo a cada chamada.
+    // Idempotência olha a existência da linha, não arquivo_pdf: o campo é
+    // sempre nulo agora e reemitiria para todo mundo a cada chamada.
     const existing =
       await this.repo.findExistingGuestCertificatesByActivity(atividadeId);
     const existingByConvidadoId = new Map(
@@ -153,10 +151,8 @@ export class CertificateService {
       );
     }
 
-    // A linha do certificado E o certificado: como nao ha mais arquivo para
-    // gerar, emitir e so inserir. Por isso a idempotencia passou a olhar a
-    // existencia da linha, e nao mais a presenca de arquivo_pdf — que agora
-    // e sempre nulo e faria o sistema reemitir para todo mundo a cada chamada.
+    // Idempotência olha a existência da linha, não arquivo_pdf: o campo é
+    // sempre nulo agora e reemitiria para todo mundo a cada chamada.
     const existing =
       await this.repo.findExistingUserCertificatesByEvent(eventoId);
     const existingByUsuarioId = new Map(

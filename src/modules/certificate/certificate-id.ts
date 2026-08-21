@@ -1,12 +1,10 @@
-// src/modules/certificate/certificate-id.ts
 import { NotFoundException } from '@nestjs/common';
 
 export type CertificateKind = 'user' | 'guest';
 
 /**
- * Ids de certificado circulam como "user-45" / "guest-12": participante e
- * convidado vivem em tabelas separadas e podem repetir o mesmo id numérico,
- * então o prefixo é o que diz em qual tabela procurar.
+ * Participante e convidado vivem em tabelas separadas e podem repetir o mesmo
+ * id numérico, por isso o id circula prefixado: "user-45" / "guest-12".
  */
 export function parseCertificateId(rawId: string): {
   kind: CertificateKind;
