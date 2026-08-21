@@ -5,7 +5,7 @@
 // caminhos precisam produzir exatamente o mesmo QR e a mesma data: se as
 // implementações divergirem, o mesmo certificado sai diferente em cada um.
 
-import { FUSO_CERTIFICADO } from '../pdf/format-date-range';
+import { BAHIA_TIMEZONE } from 'src/common/helpers/bahia-date.helper';
 
 const PUBLIC_BASE_URL =
   process.env.PUBLIC_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3001}`;
@@ -30,6 +30,6 @@ export function formatarDataHoraAssinatura(data: Date): string {
   return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'short',
     timeStyle: 'short',
-    timeZone: FUSO_CERTIFICADO,
+    timeZone: BAHIA_TIMEZONE,
   }).format(data);
 }

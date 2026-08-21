@@ -10,6 +10,7 @@ import { gerarAssinatura, normalizarCodigo } from './verification-hash';
 import { gerarQrPng } from './qr';
 import { formatarDataHoraAssinatura, urlVerificacao } from './signature-format';
 import { mapGuestRole, mapParticipantRole } from '../certificate-roles';
+import { formatBahiaDate } from 'src/common/helpers/bahia-date.helper';
 
 @Injectable()
 export class CertificateSignatureService {
@@ -218,8 +219,8 @@ export class CertificateSignatureService {
         tipo: cert.tipo,
         titular: cert.titular,
         referente: cert.contexto,
-        emitidoEm: cert.dataEmissao.toISOString(),
-        assinadoEm: cert.assinadoEm.toISOString(),
+        emitidoEm: formatBahiaDate(cert.dataEmissao),
+        assinadoEm: formatBahiaDate(cert.assinadoEm),
         assinadoPor: cert.assinaturaNome,
         hash: cert.hashVerificacao,
       },

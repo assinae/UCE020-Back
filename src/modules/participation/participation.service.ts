@@ -17,7 +17,7 @@ export class ParticipationService {
     }
 
     const dateParts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Sao_Paulo',
+      timeZone: 'America/Bahia',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -31,17 +31,23 @@ export class ParticipationService {
       dateParts.map((part) => [part.type, part.value]),
     ) as Record<string, string>;
 
-    const offsetName = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Sao_Paulo',
-      timeZoneName: 'shortOffset',
-    })
-      .formatToParts(date)
-      .find((part) => part.type === 'timeZoneName')?.value ?? 'GMT-03:00';
+    const offsetName =
+      new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Bahia',
+        timeZoneName: 'shortOffset',
+      })
+        .formatToParts(date)
+        .find((part) => part.type === 'timeZoneName')?.value ?? 'GMT-03:00';
 
     const offsetMatch = offsetName.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/i);
     const offsetSign = offsetMatch?.[1] ?? '-';
-    const offsetHours = String(parseInt(offsetMatch?.[2] ?? '3', 10)).padStart(2, '0');
-    const offsetMinutes = String(parseInt(offsetMatch?.[3] ?? '0', 10)).padStart(2, '0');
+    const offsetHours = String(parseInt(offsetMatch?.[2] ?? '3', 10)).padStart(
+      2,
+      '0',
+    );
+    const offsetMinutes = String(
+      parseInt(offsetMatch?.[3] ?? '0', 10),
+    ).padStart(2, '0');
     const offset = `${offsetSign}${offsetHours}:${offsetMinutes}`;
 
     return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}.000${offset}`;
@@ -77,10 +83,8 @@ export class ParticipationService {
       throw new NotFoundException('Inscrição não encontrada');
     }
 
-    const presencasConfirmadas = await this.repo.findConfirmedAttendancesForEvent(
-      usuarioId,
-      eventoId,
-    );
+    const presencasConfirmadas =
+      await this.repo.findConfirmedAttendancesForEvent(usuarioId, eventoId);
 
     if (presencasConfirmadas.length > 0) {
       throw new BadRequestException(
@@ -163,21 +167,17 @@ export class ParticipationService {
 
     const agora = new Date();
     const inicioAtividade = new Date(atividade.dataInicio);
-
-    const mesmaData =
-      agora.getFullYear() === inicioAtividade.getFullYear() &&
-      agora.getMonth() === inicioAtividade.getMonth() &&
-      agora.getDate() === inicioAtividade.getDate();
-
-    if (!mesmaData) {
-      throw new BadRequestException(
-        'A presença só pode ser marcada na data da atividade',
-      );
-    }
+    const fimAtividade = new Date(atividade.dataFim);
 
     if (agora < inicioAtividade) {
       throw new BadRequestException(
-        'A presença só pode ser marcada a partir do horário de início da atividade',
+        'A atividade ainda não começou. A presença só pode ser marcada a partir do horário de início.',
+      );
+    }
+
+    if (agora > fimAtividade) {
+      throw new BadRequestException(
+        'A atividade já terminou. Não é mais possível marcar presença.',
       );
     }
 
@@ -285,10 +285,13 @@ export class ParticipationService {
     }
 
     if (atividade.eventoId !== eventoId) {
-      throw new BadRequestException('Atividade não pertence ao evento informado');
+      throw new BadRequestException(
+        'Atividade não pertence ao evento informado',
+      );
     }
 
-    const participantes = await this.repo.findParticipantsByActivity(atividadeId);
+    const participantes =
+      await this.repo.findParticipantsByActivity(atividadeId);
 
     return {
       message: 'Participantes da atividade obtidos com sucesso',
@@ -311,7 +314,9 @@ export class ParticipationService {
     }
 
     if (atividade.eventoId !== eventoId) {
-      throw new BadRequestException('Atividade não pertence ao evento informado');
+      throw new BadRequestException(
+        'Atividade não pertence ao evento informado',
+      );
     }
 
     return {
