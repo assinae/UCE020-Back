@@ -48,12 +48,16 @@ export const tabelaUsuario = pgTable('usuario', {
   avatarUrl: text('avatar_url'),
   isActive: boolean('is_active').notNull().default(false),
   resetPasswordToken: text('reset_password_token'),
-  resetPasswordExpires: timestamp('reset_password_expires'),
+  resetPasswordExpires: timestamp('reset_password_expires', {
+    withTimezone: true,
+  }),
   verificationCode: text('verification_code'),
-  codeExpiresAt: timestamp('code_expires_at'),
+  codeExpiresAt: timestamp('code_expires_at', { withTimezone: true }),
 
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
@@ -67,8 +71,8 @@ export const tabelaEvento = pgTable('evento', {
   localizacao: text('localizacao').notNull(),
   responsavel: text('responsavel').notNull(),
   cargaHoraria: integer('cargaHoraria').notNull(),
-  dataInicio: timestamp('dataInicio').notNull(),
-  dataFim: timestamp('dataFim').notNull(),
+  dataInicio: timestamp('dataInicio', { withTimezone: true }).notNull(),
+  dataFim: timestamp('dataFim', { withTimezone: true }).notNull(),
   status: statusEnum('status').notNull(),
   foto: text('foto'), //url
   assinante1Nome: text('assinante1_nome'),
@@ -76,8 +80,10 @@ export const tabelaEvento = pgTable('evento', {
   assinante2Nome: text('assinante2_nome'),
   assinante2Titulo: text('assinante2_titulo'),
 
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
@@ -95,8 +101,8 @@ export const tabelaAtividade = pgTable('atividade', {
   nome: varchar({ length: 255 }).notNull(),
   descricao: text('descricao').notNull(),
   localizacao: text('localizacao').notNull(),
-  dataInicio: timestamp('dataInicio').notNull(),
-  dataFim: timestamp('dataFim').notNull(),
+  dataInicio: timestamp('dataInicio', { withTimezone: true }).notNull(),
+  dataFim: timestamp('dataFim', { withTimezone: true }).notNull(),
   categoria: categoriaAtividadeEnum('categoria').notNull(),
   cargaHoraria: integer('cargaHoraria').notNull(),
   status: statusEnum('status').notNull(),
@@ -106,8 +112,10 @@ export const tabelaAtividade = pgTable('atividade', {
     .notNull()
     .references(() => tabelaEvento.id, { onDelete: 'cascade' }),
 
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
@@ -128,19 +136,16 @@ export const tabelaParticipacoes = pgTable('participacao', {
 });
 
 //Tabela de participacoes e atividades
-export const tabelaParticipacoesAtividades = pgTable(
-  'participacoes_atividades',
-  {
-    participacaoId: integer('participacao_id')
-      .notNull()
-      .references(() => tabelaParticipacoes.id, { onDelete: 'cascade' }),
-    atividadeId: integer('atividade_id')
-      .notNull()
-      .references(() => tabelaAtividade.id, { onDelete: 'cascade' }),
-    presente: boolean('presente').notNull().default(false),
-    dataPresenca: timestamp('data_presenca'),
-  },
-);
+export const tabelaParticipacoesAtividades = pgTable('participacoes_atividades', {
+  participacaoId: integer('participacao_id')
+    .notNull()
+    .references(() => tabelaParticipacoes.id, { onDelete: 'cascade' }),
+  atividadeId: integer('atividade_id')
+    .notNull()
+    .references(() => tabelaAtividade.id, { onDelete: 'cascade' }),
+  presente: boolean('presente').notNull().default(false),
+  dataPresenca: timestamp('data_presenca', { withTimezone: true }),
+});
 
 //Tabela de certificado dos participantes
 export const tabelaCertificadoEvento = pgTable('certificado_evento', {
@@ -151,11 +156,11 @@ export const tabelaCertificadoEvento = pgTable('certificado_evento', {
   eventoId: integer('evento_id')
     .notNull()
     .references(() => tabelaEvento.id, { onDelete: 'cascade' }),
-  dataEmissao: timestamp('dataEmissao').notNull(),
+  dataEmissao: timestamp('dataEmissao', { withTimezone: true }).notNull(),
   arquivoPdf: text('arquivo_pdf'), //url do arquivo PDF gerado
   // --- Assinatura digital (lógica + carimbo/hash) ---
   assinado: boolean('assinado').notNull().default(false),
-  assinadoEm: timestamp('assinado_em'),
+  assinadoEm: timestamp('assinado_em', { withTimezone: true }),
   assinadoPor: integer('assinado_por').references(() => tabelaUsuario.id, {
     onDelete: 'set null',
   }),
@@ -173,11 +178,11 @@ export const tabelaCertificadoAtividade = pgTable('certificado_atividade', {
   atividadeId: integer('atividade_id')
     .notNull()
     .references(() => tabelaAtividade.id, { onDelete: 'cascade' }),
-  dataEmissao: timestamp('dataEmissao').notNull(),
+  dataEmissao: timestamp('dataEmissao', { withTimezone: true }).notNull(),
   arquivoPdf: text('arquivo_pdf'), //url do arquivo PDF gerado
   // --- Assinatura digital (lógica + carimbo/hash) ---
   assinado: boolean('assinado').notNull().default(false),
-  assinadoEm: timestamp('assinado_em'),
+  assinadoEm: timestamp('assinado_em', { withTimezone: true }),
   assinadoPor: integer('assinado_por').references(() => tabelaUsuario.id, {
     onDelete: 'set null',
   }),
@@ -195,11 +200,11 @@ export const tabelaCertificadoConvidado = pgTable('certificado_convidado', {
   atividadeId: integer('atividade_id')
     .notNull()
     .references(() => tabelaAtividade.id, { onDelete: 'cascade' }),
-  dataEmissao: timestamp('dataEmissao').notNull(),
+  dataEmissao: timestamp('dataEmissao', { withTimezone: true }).notNull(),
   arquivoPdf: text('arquivo_pdf'), //url do arquivo PDF gerado
   // --- Assinatura digital (lógica + carimbo/hash) ---
   assinado: boolean('assinado').notNull().default(false),
-  assinadoEm: timestamp('assinado_em'),
+  assinadoEm: timestamp('assinado_em', { withTimezone: true }),
   assinadoPor: integer('assinado_por').references(() => tabelaUsuario.id, {
     onDelete: 'set null',
   }),

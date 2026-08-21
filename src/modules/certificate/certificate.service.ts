@@ -10,6 +10,7 @@ import { CertificateFileStorageService } from './storage/certificate-file-storag
 import { renderGuestCertificatePdf } from './pdf/guest-certificate.pdf';
 import { renderParticipantCertificatePdf } from './pdf/participant-certificate.pdf';
 import { formatDateRange } from './pdf/format-date-range';
+import { formatBahiaDate } from 'src/common/helpers/bahia-date.helper';
 
 @Injectable()
 export class CertificateService {
@@ -170,7 +171,7 @@ export class CertificateService {
             email: guest.email,
             role: this.mapGuestRole(guest.funcao),
             alreadyIssued: existingByConvidadoId.has(guest.convidadoId),
-            issueDate: cert.dataEmissao.toISOString(),
+            issueDate: formatBahiaDate(cert.dataEmissao),
             fileUrl: cert.arquivoPdf ?? undefined,
           };
         }),
@@ -284,7 +285,7 @@ export class CertificateService {
             email: participacao.email,
             role: this.mapRole(participacao.tipo),
             alreadyIssued: existingByUsuarioId.has(participacao.usuarioId),
-            issueDate: cert.dataEmissao.toISOString(),
+            issueDate: formatBahiaDate(cert.dataEmissao),
             fileUrl: cert.arquivoPdf ?? undefined,
           };
         }),
@@ -318,7 +319,7 @@ export class CertificateService {
       role: guest ? this.mapGuestRole(row.role) : this.mapRole(row.role),
       hours: row.activityHours ?? undefined,
       location: row.location,
-      issueDate: row.dataEmissao.toISOString(),
+      issueDate: formatBahiaDate(row.dataEmissao),
       imageUrl: row.arquivoPdf ?? undefined,
     };
   }
