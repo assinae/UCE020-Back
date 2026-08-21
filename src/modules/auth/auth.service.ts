@@ -13,17 +13,17 @@ import { db } from '../../db';
 import { tabelaUsuario } from '../../db/schema';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private jwtService: JwtService,
-    private readonly mailerService: MailerService,
+    private readonly emailService: EmailService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -66,23 +66,28 @@ export class AuthService {
 
     const link = `${this.configService.get<string>('FRONTEND_URL')}/register?step=code&email=${encodeURIComponent(registerDto.email)}`;
 
-    await this.mailerService.sendMail({
-      to: registerDto.email,
-      subject: 'Confirme seu cadastro - Assinaê',
-      html: `
-        <div style="font-family: sans-serif; padding: 20px;">
-          <h2>Bem-vindo ao Assinaê!</h2>
-          <p>Seu código de confirmação é:</p>
-          <h1 style="letter-spacing: 5px; color: #4F46E5;">${verificationCode}</h1>
-          <p>Este código expira em 15 minutos.</p>
-          <p>
-            <a href="${link}" style="color: #4F46E5;">
-              Clique aqui para confirmar
-            </a>
-          </p>
-        </div>
-      `,
-    });
+    try {
+      await this.emailService.send({
+        to: registerDto.email,
+        subject: 'Confirme seu cadastro - Assinaê',
+        html: `
+          <div style="font-family: sans-serif; padding: 20px;">
+            <h2>Bem-vindo ao Assinaê!</h2>
+            <p>Seu código de confirmação é:</p>
+            <h1 style="letter-spacing: 5px; color: #4F46E5;">${verificationCode}</h1>
+            <p>Este código expira em 15 minutos.</p>
+            <p>
+              <a href="${link}" style="color: #4F46E5;">
+                Clique aqui para confirmar
+              </a>
+            </p>
+          </div>
+        `,
+      });
+    } catch (error) {
+      await db.delete(tabelaUsuario).where(eq(tabelaUsuario.id, newUser.id));
+      throw error;
+    }
 
     return {
       message:
@@ -159,12 +164,12 @@ export class AuthService {
     const frontUrl = this.configService.get<string>('FRONTEND_URL');
     const resetLink = `${frontUrl}/redefine-password?token=${token}`;
 
-    await this.mailerService.sendMail({
+    await this.emailService.send({
       to: user.email,
       subject: 'Recuperação de Senha',
       html: `
         <p>Olá, ${user.nome}!</p>
-        <p>Você solicitou a alteração de sua senha.</p>
+        <p>Você solicitou a alteração da sua senha.</p>
         <p>Clique no link abaixo para cadastrar uma nova senha (válido por 15 minutos):</p>
         <a href="${resetLink}" target="_blank">${resetLink}</a>
       `,
