@@ -71,10 +71,10 @@ export const tabelaEvento = pgTable('evento', {
   dataFim: timestamp('dataFim').notNull(),
   status: statusEnum('status').notNull(),
   foto: text('foto'), //url
-  assinante1Nome:       text('assinante1_nome'),     
-  assinante1Titulo:     text('assinante1_titulo'),     
-  assinante2Nome:       text('assinante2_nome'),        
-  assinante2Titulo:     text('assinante2_titulo'), 
+  assinante1Nome: text('assinante1_nome'),
+  assinante1Titulo: text('assinante1_titulo'),
+  assinante2Nome: text('assinante2_nome'),
+  assinante2Titulo: text('assinante2_titulo'),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
