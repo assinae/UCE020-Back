@@ -18,6 +18,7 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { ActivityService } from '../activity/activity.service';
 import { assertEventOrganizer } from 'src/common/helpers/assert-event-organizer.helper';
 import { SupabaseStorageService } from 'src/common/storage/supabase-storage.service';
+import { parseEventDate } from 'src/common/helpers/parse-event-date.helper';
 
 export type TipoParticipante = 'participante' | 'organizador' | 'monitor';
 
@@ -101,8 +102,8 @@ export class EventService {
           localizacao: createEventDto.localizacao,
           responsavel: createEventDto.responsavel,
           cargaHoraria: createEventDto.cargaHoraria,
-          dataInicio: createEventDto.dataInicio,
-          dataFim: createEventDto.dataFim,
+          dataInicio: parseEventDate(createEventDto.dataInicio),
+          dataFim: parseEventDate(createEventDto.dataFim),
           status: createEventDto.status,
           foto: createEventDto.foto,
         })
@@ -309,11 +310,19 @@ export class EventService {
 
     await assertEventOrganizer(userId, eventoExistente.id);
 
-    const { atividades, ...dadosEvento } = updateEventDto;
+    const { atividades, dataInicio, dataFim, ...dadosEvento } = updateEventDto;
 
     const [eventoAtualizado] = await db
       .update(tabelaEvento)
-      .set(dadosEvento as Partial<typeof tabelaEvento.$inferInsert>)
+      .set({
+        ...dadosEvento,
+        ...(dataInicio !== undefined && {
+          dataInicio: parseEventDate(dataInicio),
+        }),
+        ...(dataFim !== undefined && {
+          dataFim: parseEventDate(dataFim),
+        }),
+      })
       .where(eq(tabelaEvento.id, id))
       .returning();
 

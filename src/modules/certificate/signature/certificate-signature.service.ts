@@ -3,6 +3,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { assertEventOrganizer } from 'src/common/helpers/assert-event-organizer.helper';
 import { CertificateRepository } from '../repository/certificate.respository';
 import { gerarAssinatura, normalizarCodigo } from './verification-hash';
+import { formatBahiaDate } from 'src/common/helpers/bahia-date.helper';
 
 @Injectable()
 export class CertificateSignatureService {
@@ -124,8 +125,8 @@ export class CertificateSignatureService {
         tipo: cert.tipo,
         titular: cert.titular,
         referente: cert.contexto,
-        emitidoEm: cert.dataEmissao.toISOString(),
-        assinadoEm: cert.assinadoEm.toISOString(),
+        emitidoEm: formatBahiaDate(cert.dataEmissao),
+        assinadoEm: formatBahiaDate(cert.assinadoEm),
         assinadoPor: cert.assinaturaNome,
         hash: cert.hashVerificacao,
       },

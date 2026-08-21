@@ -16,6 +16,7 @@ import { CreateActivityDto } from './dto/create-activity.dto';
 import { FindAllActivitiesDto } from './dto/find-activities.dto';
 import { UpdateActivityDto } from './dto/update-acitivity.dto';
 import { SupabaseStorageService } from 'src/common/storage/supabase-storage.service';
+import { parseEventDate } from 'src/common/helpers/parse-event-date.helper';
 
 @Injectable()
 export class ActivityService {
@@ -44,8 +45,8 @@ export class ActivityService {
         nome: dto.name,
         descricao: dto.description,
         localizacao: dto.location,
-        dataInicio: new Date(dto.startDate),
-        dataFim: new Date(dto.endDate),
+        dataInicio: parseEventDate(dto.startDate),
+        dataFim: parseEventDate(dto.endDate),
         categoria: dto.category,
         cargaHoraria: dto.workload ?? 0,
         status: 'pendente',
@@ -167,7 +168,10 @@ export class ActivityService {
           .from(tabelaParticipacoesAtividades)
           .where(
             and(
-              eq(tabelaParticipacoesAtividades.participacaoId, participation.id),
+              eq(
+                tabelaParticipacoesAtividades.participacaoId,
+                participation.id,
+              ),
               eq(tabelaParticipacoesAtividades.atividadeId, id),
             ),
           );
@@ -366,9 +370,11 @@ export class ActivityService {
         categoria: dto.category ?? currentActivity.categoria,
         cargaHoraria: dto.workload ?? currentActivity.cargaHoraria,
         dataInicio: dto.startDate
-          ? new Date(dto.startDate)
+          ? parseEventDate(dto.startDate)
           : currentActivity.dataInicio,
-        dataFim: dto.endDate ? new Date(dto.endDate) : currentActivity.dataFim,
+        dataFim: dto.endDate
+          ? parseEventDate(dto.endDate)
+          : currentActivity.dataFim,
         foto: dto.foto ?? currentActivity.foto,
       })
       .where(eq(tabelaAtividade.id, id))
@@ -380,11 +386,7 @@ export class ActivityService {
       throw new BadRequestException('Não foi possível atualizar a atividade');
     }
 
-    if (
-      dto.foto &&
-      currentActivity.foto &&
-      dto.foto !== currentActivity.foto
-    ) {
+    if (dto.foto && currentActivity.foto && dto.foto !== currentActivity.foto) {
       await this.storage.tryRemoveByPublicUrl(currentActivity.foto);
     }
 
