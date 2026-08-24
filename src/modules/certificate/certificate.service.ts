@@ -28,7 +28,7 @@ export class CertificateService {
     const certificateId = Number(idPart);
 
     if (
-      (kind !== 'guest' && kind !== 'user') ||
+      (kind !== 'guest' && kind !== 'user' && kind !== 'activity') ||
       !Number.isInteger(certificateId)
     ) {
       throw new NotFoundException('Certificado não encontrado.');
@@ -37,7 +37,9 @@ export class CertificateService {
     const row =
       kind === 'guest'
         ? await this.repo.findGuestCertificateById(certificateId)
-        : await this.repo.findUserCertificateById(certificateId);
+        : kind === 'activity'
+          ? await this.repo.findActivityCertificateById(certificateId)
+          : await this.repo.findUserCertificateById(certificateId);
 
     if (!row) {
       throw new NotFoundException('Certificado não encontrado.');
@@ -131,6 +133,81 @@ export class CertificateService {
     };
   }
 
+  async generateActivityCertificates(atividadeId: number, userId: number) {
+    const atividade = await this.repo.findActivityForCertificate(atividadeId);
+    if (!atividade) {
+      throw new NotFoundException('Atividade não encontrada.');
+    }
+
+    await assertEventOrganizer(userId, atividade.eventoId);
+
+    if (!atividade.gerarCertificado) {
+      throw new ForbiddenException(
+        'Esta atividade não está configurada para emitir certificado individual. Ative a opção "Gerar Certificado da Atividade" ao editar a atividade.',
+      );
+    }
+
+    if (atividade.status !== 'finalizada') {
+      throw new ForbiddenException(
+        'Só é possível emitir certificados de atividade após a atividade ser finalizada.',
+      );
+    }
+
+    const participantes =
+      await this.repo.findPresentParticipantsByActivity(atividadeId);
+    if (!participantes.length) {
+      throw new NotFoundException(
+        'Nenhum participante com presença confirmada nesta atividade.',
+      );
+    }
+
+    // Idempotência olha a existência da linha, não arquivo_pdf: o campo é
+    // sempre nulo agora (PDF é gerado sob demanda) e reemitiria para todo
+    // mundo a cada chamada.
+    const existing =
+      await this.repo.findExistingActivityCertificatesByActivity(atividadeId);
+    const existingByUsuarioId = new Map(
+      existing.map((cert) => [cert.usuarioId, cert]),
+    );
+    const pending = participantes.filter(
+      (participante) => !existingByUsuarioId.has(participante.usuarioId),
+    );
+
+    const dataEmissao = new Date();
+    const created = await this.repo.insertActivityCertificates(
+      pending.map((participante) => ({
+        usuarioId: participante.usuarioId,
+        atividadeId,
+        dataEmissao,
+      })),
+    );
+    const createdByUsuarioId = new Map(
+      created.map((cert) => [cert.usuarioId, cert]),
+    );
+
+    return {
+      message: `${created.length} certificado(s) de atividade emitido(s).`,
+      data: {
+        issued: created.length,
+        alreadyIssued: existingByUsuarioId.size,
+        certificates: participantes.map((participante) => {
+          const cert =
+            createdByUsuarioId.get(participante.usuarioId) ??
+            existingByUsuarioId.get(participante.usuarioId)!;
+
+          return {
+            usuarioId: participante.usuarioId,
+            name: participante.nome,
+            email: participante.email,
+            role: this.mapRole(participante.tipo),
+            alreadyIssued: existingByUsuarioId.has(participante.usuarioId),
+            issueDate: formatBahiaDate(cert.dataEmissao),
+          };
+        }),
+      },
+    };
+  }
+
   async generateParticipantCertificates(eventoId: number, userId: number) {
     const evento = await this.repo.findEventForCertificate(eventoId);
     if (!evento) {
@@ -213,26 +290,22 @@ export class CertificateService {
     activityTitle: string;
     activityHours: number | null;
     arquivoPdf: string | null;
+    kind: 'user' | 'guest' | 'activity';
   }) {
-    const guest = this.isGuestRole(row.role);
-
     return {
-      id: `${guest ? 'guest' : 'user'}-${row.id}`,
+      id: `${row.kind}-${row.id}`,
       title: row.activityTitle,
       participantName: row.participantName,
       participantEmail: row.participantEmail,
-      role: guest ? this.mapGuestRole(row.role) : this.mapRole(row.role),
+      role:
+        row.kind === 'guest'
+          ? this.mapGuestRole(row.role)
+          : this.mapRole(row.role),
       hours: row.activityHours ?? undefined,
       location: row.location,
       issueDate: formatBahiaDate(row.dataEmissao),
       imageUrl: row.arquivoPdf ?? undefined,
     };
-  }
-
-  private isGuestRole(role: string): boolean {
-    return ['palestrante', 'ministrante', 'moderador'].includes(
-      role.toLowerCase(),
-    );
   }
 
   private mapRole(role: string): string {

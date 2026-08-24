@@ -148,6 +148,7 @@ export class EventService {
               endDate: atividadeDto.endDate,
               foto: preparedPhoto.foto,
               guests: atividadeDto.guests,
+              generateCertificate: atividadeDto.generateCertificate,
             },
             userId,
           });
@@ -387,6 +388,7 @@ export class EventService {
                 guests: atividadeDto.guests,
                 eventId: atividadeDto.eventId,
                 foto: preparedPhoto.foto,
+                generateCertificate: atividadeDto.generateCertificate,
               },
               userId,
             });
@@ -404,6 +406,7 @@ export class EventService {
                 endDate: atividadeDto.endDate,
                 foto: preparedPhoto.foto,
                 guests: atividadeDto.guests,
+                generateCertificate: atividadeDto.generateCertificate,
               },
               userId,
             });

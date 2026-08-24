@@ -38,9 +38,15 @@ export class CertificatePdfService {
   ): Promise<CertificadoPdf> {
     const { kind, certificateId } = parseCertificateId(rawId);
 
-    return kind === 'guest'
-      ? this.buildGuestCertificate(certificateId, userId)
-      : this.buildParticipantCertificate(certificateId, userId);
+    if (kind === 'guest') {
+      return this.buildGuestCertificate(certificateId, userId);
+    }
+
+    if (kind === 'activity') {
+      return this.buildActivityCertificate(certificateId, userId);
+    }
+
+    return this.buildParticipantCertificate(certificateId, userId);
   }
 
   private async buildParticipantCertificate(
@@ -110,6 +116,45 @@ export class CertificatePdfService {
     return {
       buffer,
       filename: `Certificado Convidado - ${cert.guestName} - ${cert.activityName}.pdf`,
+    };
+  }
+
+  private async buildActivityCertificate(
+    certificateId: number,
+    userId: number,
+  ): Promise<CertificadoPdf> {
+    const cert =
+      await this.repo.findActivityCertificateForRender(certificateId);
+    if (!cert) {
+      throw new NotFoundException('Certificado não encontrado.');
+    }
+
+    if (cert.usuarioId !== userId) {
+      await this.assertOrganizador(userId, cert.eventoId);
+    }
+
+    const buffer = await renderParticipantCertificatePdf({
+      certificateId: cert.id,
+      participantName: cert.participantName,
+      role: mapParticipantRole(cert.role),
+      // renderParticipantCertificatePdf só tem um campo de "nome do contexto" —
+      // pra atividade, o certificado é sobre a atividade, não o evento inteiro.
+      eventName: cert.activityName,
+      contextLabel: 'atividade',
+      workloadHours: cert.workloadHours,
+      location: cert.location,
+      eventDate: formatDateRange(cert.dataInicio, cert.dataFim),
+      issueDate: cert.dataEmissao,
+      assinante1Nome: cert.assinante1Nome ?? undefined,
+      assinante1Titulo: cert.assinante1Titulo ?? undefined,
+      assinante2Nome: cert.assinante2Nome ?? undefined,
+      assinante2Titulo: cert.assinante2Titulo ?? undefined,
+      assinatura: await this.montarAssinatura(cert),
+    });
+
+    return {
+      buffer,
+      filename: `Certificado Atividade - ${cert.participantName} - ${cert.activityName}.pdf`,
     };
   }
 

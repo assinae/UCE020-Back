@@ -21,12 +21,14 @@ export class CertificateSignatureService {
     const assinanteNome =
       (await this.repo.findUsuarioNome(userId)) ?? 'Organizador';
 
-    const [eventoCerts, convidadoCerts] = await Promise.all([
+    const [eventoCerts, convidadoCerts, atividadeCerts] = await Promise.all([
       this.repo.findEventCertificatesToSign(eventoId, force),
       this.repo.findGuestCertificatesToSign(eventoId, force),
+      this.repo.findActivityCertificatesToSign(eventoId, force),
     ]);
 
-    const total = eventoCerts.length + convidadoCerts.length;
+    const total =
+      eventoCerts.length + convidadoCerts.length + atividadeCerts.length;
     if (total === 0) {
       throw new NotFoundException(
         force
@@ -37,7 +39,7 @@ export class CertificateSignatureService {
 
     let assinados = 0;
     const resultados: {
-      tipo: 'evento' | 'convidado';
+      tipo: 'evento' | 'convidado' | 'atividade';
       certificadoId: number;
       titular: string;
       codigoVerificacao: string;
@@ -70,6 +72,33 @@ export class CertificateSignatureService {
       });
     }
 
+    // ---- Certificados de atividade (participante presente em uma atividade específica) ----
+    for (const cert of atividadeCerts) {
+      const { codigo, hash } = gerarAssinatura({
+        tipo: 'atividade',
+        certificadoId: cert.id,
+        titularNome: cert.participantName,
+        dataEmissao: cert.dataEmissao,
+      });
+
+      await this.repo.setActivityCertificateSignature(cert.id, {
+        assinadoEm,
+        assinadoPor: userId,
+        assinaturaNome: assinanteNome,
+        codigoVerificacao: codigo,
+        hashVerificacao: hash,
+      });
+
+      assinados++;
+      resultados.push({
+        tipo: 'atividade',
+        certificadoId: cert.id,
+        titular: cert.participantName,
+        codigoVerificacao: codigo,
+      });
+    }
+
+    // ---- Certificados de convidado ----
     for (const cert of convidadoCerts) {
       const { codigo, hash } = gerarAssinatura({
         tipo: 'convidado',
