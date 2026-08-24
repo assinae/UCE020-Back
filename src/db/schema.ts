@@ -107,6 +107,8 @@ export const tabelaAtividade = pgTable('atividade', {
   cargaHoraria: integer('cargaHoraria').notNull(),
   status: statusEnum('status').notNull(),
   foto: text('foto'), //url
+  //Define se a atividade emite certificado individual para os participantes presentes
+  gerarCertificado: boolean('gerar_certificado').notNull().default(false),
   //Uma atividade pertence a um evento
   eventoId: integer('evento_id')
     .notNull()

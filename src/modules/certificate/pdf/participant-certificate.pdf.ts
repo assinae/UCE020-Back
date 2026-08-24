@@ -13,6 +13,9 @@ export type ParticipantCertificateData = {
   participantName: string;
   role: string;
   eventName: string;
+  // Quando o certificado se refere a uma atividade específica (e não ao evento
+  // como um todo), ajusta os textos do corpo ("participou da atividade" etc.).
+  contextLabel?: 'evento' | 'atividade';
   workloadHours?: number | null;
   location: string;
   eventDate: string;
@@ -36,16 +39,27 @@ const ROLE_CERT_TITLE: Record<string, string> = {
   Organizador: 'CERTIFICADO DE ORGANIZAÇÃO',
 };
 
-const ROLE_VERB: Record<string, string> = {
-  Ouvinte: 'participou do evento',
-  Monitor: 'atuou como monitor no evento',
-  Organizador: 'atuou como organizador do evento',
-};
+function buildRoleVerb(
+  role: string,
+  contextLabel: 'evento' | 'atividade',
+): string {
+  const label = contextLabel === 'atividade' ? 'atividade' : 'evento';
+  const preposition = contextLabel === 'atividade' ? 'da' : 'do';
+  const article = contextLabel === 'atividade' ? 'na' : 'no';
+
+  const verbs: Record<string, string> = {
+    Ouvinte: `participou ${preposition} ${label}`,
+    Monitor: `atuou como monitor ${article} ${label}`,
+    Organizador: `atuou como organizador ${preposition} ${label}`,
+  };
+
+  return verbs[role] ?? verbs.Ouvinte;
+}
 
 function buildDocument(data: ParticipantCertificateData) {
   const e = React.createElement;
   const certTitle = ROLE_CERT_TITLE[data.role] ?? 'CERTIFICADO DE PARTICIPAÇÃO';
-  const roleVerb = ROLE_VERB[data.role] ?? 'participou do evento';
+  const roleVerb = buildRoleVerb(data.role, data.contextLabel ?? 'evento');
 
   return e(
     Document,

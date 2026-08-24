@@ -8,6 +8,7 @@ import { CertificateController } from './controller/certificate.controller';
 import { CertificateGuestController } from './controller/certificate-guest.controller';
 import { CertificateParticipantController } from './controller/certificate-participant.controller';
 import { CertificatePdfController } from './controller/certificate-pdf.controller';
+import { CertificateActivityParticipantController } from './controller/certificate-activity-participant.controller';
 import { CertificateDetailController } from './controller/certificate-detail.controller';
 import { CertificatePdfService } from './certificate-pdf.service';
 import { CertificateSignatureService } from './signature/certificate-signature.service';
@@ -24,6 +25,7 @@ import { CertificateVerificationController } from './signature/certificate-verif
     CertificateController,
     CertificateGuestController,
     CertificateParticipantController,
+    CertificateActivityParticipantController,
     CertificateMeController,
     CertificatePdfController,
     CertificateDetailController,

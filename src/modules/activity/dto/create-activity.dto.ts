@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsString,
   IsNumber,
@@ -6,6 +6,7 @@ import {
   IsArray,
   IsEnum,
   IsDateString,
+  IsBoolean,
   MinLength,
   Min,
   ValidateNested,
@@ -80,6 +81,28 @@ export class CreateActivityDto {
   @IsString({ message: 'A foto deve ser uma string.' })
   @IsOptional()
   foto?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Define se será possível gerar certificado individual desta atividade para os participantes com presença confirmada.',
+    example: true,
+    default: false,
+  })
+  // O endpoint usa multipart/form-data (por causa do upload de foto), então o
+  // valor sempre chega como string ("true"/"false"). `@Type(() => Boolean)`
+  // faria `Boolean("false") === true`, então convertemos manualmente.
+  @Transform(({ value }: { value: unknown }): unknown => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      if (normalized === 'true' || normalized === '1') return true;
+      if (normalized === 'false' || normalized === '0') return false;
+    }
+    return value;
+  })
+  @IsBoolean({ message: 'Gerar certificado deve ser um valor booleano.' })
+  @IsOptional()
+  generateCertificate?: boolean;
 
   @ApiPropertyOptional({ type: [CreateGuestDto] })
   @IsArray({ message: 'Os convidados devem ser uma lista.' })
