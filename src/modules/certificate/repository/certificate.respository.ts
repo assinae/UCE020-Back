@@ -14,6 +14,7 @@ import {
   tabelaParticipacoesAtividades,
 } from 'src/db/schema';
 import { and, eq, or, sql, SQL } from 'drizzle-orm';
+import { PgTable } from 'drizzle-orm/pg-core';
 
 export interface EventoCertParaAssinar {
   id: number;
@@ -48,6 +49,19 @@ export interface DadosAssinatura {
   assinaturaNome: string;
   codigoVerificacao: string;
   hashVerificacao: string;
+}
+
+/** Código e hash são por certificado; o resto é igual para o lote inteiro. */
+export interface AssinaturaEmLote {
+  id: number;
+  codigoVerificacao: string;
+  hashVerificacao: string;
+}
+
+export interface DadosAssinaturaComuns {
+  assinadoEm: Date;
+  assinadoPor: number;
+  assinaturaNome: string;
 }
 
 export interface CertificadoVerificado {
@@ -496,11 +510,65 @@ export class CertificateRepository {
       .where(cond);
   }
 
-  async setEventCertificateSignature(id: number, dados: DadosAssinatura) {
-    await db
-      .update(tabelaCertificadoEvento)
-      .set({ assinado: true, ...dados })
-      .where(eq(tabelaCertificadoEvento.id, id));
+  async setEventCertificateSignatures(
+    assinaturas: AssinaturaEmLote[],
+    comuns: DadosAssinaturaComuns,
+  ) {
+    await this.gravarAssinaturasEmLote(
+      tabelaCertificadoEvento,
+      assinaturas,
+      comuns,
+    );
+  }
+
+  async setGuestCertificateSignatures(
+    assinaturas: AssinaturaEmLote[],
+    comuns: DadosAssinaturaComuns,
+  ) {
+    await this.gravarAssinaturasEmLote(
+      tabelaCertificadoConvidado,
+      assinaturas,
+      comuns,
+    );
+  }
+
+  /**
+   * Grava o lote inteiro num comando só. A versão anterior fazia um UPDATE por
+   * id dentro de um for: um round-trip ao banco por certificado, o que dava
+   * ~64s para um evento de 500 participantes.
+   *
+   * O lote vai como um único parâmetro JSON em vez de arrays: o template `sql`
+   * do Drizzle achata array JS em lista de parâmetros (`$1, $2, ...`), o que
+   * vira um `record` e não casta para `int[]`. Como bônus, um parâmetro só
+   * nunca esbarra no teto de 65535 parâmetros do protocolo.
+   */
+  private async gravarAssinaturasEmLote(
+    tabela: PgTable,
+    assinaturas: AssinaturaEmLote[],
+    comuns: DadosAssinaturaComuns,
+  ) {
+    if (!assinaturas.length) return;
+
+    const lote = JSON.stringify(
+      assinaturas.map((a) => ({
+        id: a.id,
+        codigo: a.codigoVerificacao,
+        hash: a.hashVerificacao,
+      })),
+    );
+
+    await db.execute(sql`
+      update ${tabela} as cert
+         set assinado = true,
+             assinado_em = ${comuns.assinadoEm},
+             assinado_por = ${comuns.assinadoPor},
+             assinatura_nome = ${comuns.assinaturaNome},
+             codigo_verificacao = lote.codigo,
+             hash_verificacao = lote.hash
+        from json_to_recordset(${lote}::json)
+             as lote(id int, codigo text, hash text)
+       where cert.id = lote.id
+    `);
   }
 
   async setActivityCertificateSignature(id: number, dados: DadosAssinatura) {
@@ -508,13 +576,6 @@ export class CertificateRepository {
       .update(tabelaCertificadoAtividade)
       .set({ assinado: true, ...dados })
       .where(eq(tabelaCertificadoAtividade.id, id));
-  }
-
-  async setGuestCertificateSignature(id: number, dados: DadosAssinatura) {
-    await db
-      .update(tabelaCertificadoConvidado)
-      .set({ assinado: true, ...dados })
-      .where(eq(tabelaCertificadoConvidado.id, id));
   }
 
   private readonly resetFields = {

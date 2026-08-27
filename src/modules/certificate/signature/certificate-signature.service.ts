@@ -35,7 +35,6 @@ export class CertificateSignatureService {
       );
     }
 
-    let assinados = 0;
     const resultados: {
       tipo: 'evento' | 'convidado';
       certificadoId: number;
@@ -44,8 +43,13 @@ export class CertificateSignatureService {
     }[] = [];
 
     const assinadoEm = new Date();
+    const comuns = {
+      assinadoEm,
+      assinadoPor: userId,
+      assinaturaNome: assinanteNome,
+    };
 
-    for (const cert of eventoCerts) {
+    const assinaturasEvento = eventoCerts.map((cert) => {
       const { codigo, hash } = gerarAssinatura({
         tipo: 'evento',
         certificadoId: cert.id,
@@ -53,24 +57,17 @@ export class CertificateSignatureService {
         dataEmissao: cert.dataEmissao,
       });
 
-      await this.repo.setEventCertificateSignature(cert.id, {
-        assinadoEm,
-        assinadoPor: userId,
-        assinaturaNome: assinanteNome,
-        codigoVerificacao: codigo,
-        hashVerificacao: hash,
-      });
-
-      assinados++;
       resultados.push({
         tipo: 'evento',
         certificadoId: cert.id,
         titular: cert.participantName,
         codigoVerificacao: codigo,
       });
-    }
 
-    for (const cert of convidadoCerts) {
+      return { id: cert.id, codigoVerificacao: codigo, hashVerificacao: hash };
+    });
+
+    const assinaturasConvidado = convidadoCerts.map((cert) => {
       const { codigo, hash } = gerarAssinatura({
         tipo: 'convidado',
         certificadoId: cert.id,
@@ -78,22 +75,22 @@ export class CertificateSignatureService {
         dataEmissao: cert.dataEmissao,
       });
 
-      await this.repo.setGuestCertificateSignature(cert.id, {
-        assinadoEm,
-        assinadoPor: userId,
-        assinaturaNome: assinanteNome,
-        codigoVerificacao: codigo,
-        hashVerificacao: hash,
-      });
-
-      assinados++;
       resultados.push({
         tipo: 'convidado',
         certificadoId: cert.id,
         titular: cert.guestName,
         codigoVerificacao: codigo,
       });
-    }
+
+      return { id: cert.id, codigoVerificacao: codigo, hashVerificacao: hash };
+    });
+
+    await Promise.all([
+      this.repo.setEventCertificateSignatures(assinaturasEvento, comuns),
+      this.repo.setGuestCertificateSignatures(assinaturasConvidado, comuns),
+    ]);
+
+    const assinados = assinaturasEvento.length + assinaturasConvidado.length;
 
     return {
       message: `${assinados} certificado(s) assinado(s) em lote.`,

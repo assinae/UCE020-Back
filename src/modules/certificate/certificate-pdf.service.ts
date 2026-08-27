@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   ForbiddenException,
   Injectable,
@@ -10,6 +11,7 @@ import { formatDateRange } from './pdf/format-date-range';
 import { parseCertificateId } from './certificate-id';
 import { mapGuestRole, mapParticipantRole } from './certificate-roles';
 import { gerarQrPng } from './signature/qr';
+import { PdfCache } from './pdf-cache';
 import {
   formatarDataHoraAssinatura,
   urlVerificacao,
@@ -22,31 +24,43 @@ interface EstadoAssinatura {
   codigoVerificacao: string | null;
 }
 
-export interface CertificadoPdf {
-  buffer: Buffer;
+export interface CertificadoPdfPreparado {
+  /** Muda sempre que muda algo impresso no PDF. Serve de ETag e de chave de cache. */
+  etag: string;
   filename: string;
+  render: () => Promise<Buffer>;
 }
+
+/** ~540 certificados de 118 kB. O pico medido sob carga foi de 524 MB. */
+const LIMITE_CACHE_BYTES = 64 * 1024 * 1024;
 
 /** Monta o PDF no momento do download, a partir das colunas do banco. */
 @Injectable()
 export class CertificatePdfService {
+  private readonly cache = new PdfCache(LIMITE_CACHE_BYTES);
+
   constructor(private readonly repo: CertificateRepository) {}
 
-  async buildCertificatePdf(
+  /**
+   * Resolve identidade e permissão numa consulta só e devolve o render adiado.
+   * Quem chama decide se precisa do PDF: com ETag conferido, uma revalidação
+   * custa essa consulta em vez dos ~400ms de CPU da renderização.
+   */
+  async prepareCertificatePdf(
     rawId: string,
     userId: number,
-  ): Promise<CertificadoPdf> {
+  ): Promise<CertificadoPdfPreparado> {
     const { kind, certificateId } = parseCertificateId(rawId);
 
     return kind === 'guest'
-      ? this.buildGuestCertificate(certificateId, userId)
-      : this.buildParticipantCertificate(certificateId, userId);
+      ? this.prepareGuestCertificate(certificateId, userId)
+      : this.prepareParticipantCertificate(certificateId, userId);
   }
 
-  private async buildParticipantCertificate(
+  private async prepareParticipantCertificate(
     certificateId: number,
     userId: number,
-  ): Promise<CertificadoPdf> {
+  ): Promise<CertificadoPdfPreparado> {
     const cert = await this.repo.findEventCertificateForRender(certificateId);
     if (!cert) {
       throw new NotFoundException('Certificado não encontrado.');
@@ -56,7 +70,7 @@ export class CertificatePdfService {
       await this.assertOrganizador(userId, cert.eventoId);
     }
 
-    const buffer = await renderParticipantCertificatePdf({
+    const dados = {
       certificateId: cert.id,
       participantName: cert.participantName,
       role: mapParticipantRole(cert.role),
@@ -69,19 +83,27 @@ export class CertificatePdfService {
       assinante1Titulo: cert.assinante1Titulo ?? undefined,
       assinante2Nome: cert.assinante2Nome ?? undefined,
       assinante2Titulo: cert.assinante2Titulo ?? undefined,
-      assinatura: await this.montarAssinatura(cert),
-    });
+    };
+
+    const etag = this.calcularEtag('user', dados, cert);
 
     return {
-      buffer,
+      etag,
       filename: `Certificado - ${cert.participantName} - ${cert.eventName}.pdf`,
+      render: () =>
+        this.renderComCache(etag, async () =>
+          renderParticipantCertificatePdf({
+            ...dados,
+            assinatura: await this.montarAssinatura(cert),
+          }),
+        ),
     };
   }
 
-  private async buildGuestCertificate(
+  private async prepareGuestCertificate(
     certificateId: number,
     userId: number,
-  ): Promise<CertificadoPdf> {
+  ): Promise<CertificadoPdfPreparado> {
     const cert = await this.repo.findGuestCertificateForRender(certificateId);
     if (!cert) {
       throw new NotFoundException('Certificado não encontrado.');
@@ -90,7 +112,7 @@ export class CertificatePdfService {
     // Convidado não é usuário do sistema: não há "dono" que possa baixar.
     await this.assertOrganizador(userId, cert.eventoId);
 
-    const buffer = await renderGuestCertificatePdf({
+    const dados = {
       certificateId: cert.id,
       guestName: cert.guestName,
       role: mapGuestRole(cert.role),
@@ -104,13 +126,57 @@ export class CertificatePdfService {
       assinante1Titulo: cert.assinante1Titulo ?? undefined,
       assinante2Nome: cert.assinante2Nome ?? undefined,
       assinante2Titulo: cert.assinante2Titulo ?? undefined,
-      assinatura: await this.montarAssinatura(cert),
-    });
+    };
+
+    const etag = this.calcularEtag('guest', dados, cert);
 
     return {
-      buffer,
+      etag,
       filename: `Certificado Convidado - ${cert.guestName} - ${cert.activityName}.pdf`,
+      render: () =>
+        this.renderComCache(etag, async () =>
+          renderGuestCertificatePdf({
+            ...dados,
+            assinatura: await this.montarAssinatura(cert),
+          }),
+        ),
     };
+  }
+
+  private async renderComCache(
+    etag: string,
+    renderizar: () => Promise<Buffer>,
+  ): Promise<Buffer> {
+    const cacheado = this.cache.get(etag);
+    if (cacheado) return cacheado;
+
+    const buffer = await renderizar();
+    this.cache.set(etag, buffer);
+
+    return buffer;
+  }
+
+  /**
+   * Hash de tudo que aparece no papel, incluindo o estado da assinatura. Datas
+   * viram ISO no JSON.stringify, então o resultado é estável entre processos.
+   */
+  private calcularEtag(
+    tipo: 'user' | 'guest',
+    dados: object,
+    assinatura: EstadoAssinatura,
+  ): string {
+    const conteudo = JSON.stringify({
+      tipo,
+      dados,
+      assinatura: {
+        assinado: assinatura.assinado,
+        assinadoEm: assinatura.assinadoEm,
+        assinaturaNome: assinatura.assinaturaNome,
+        codigoVerificacao: assinatura.codigoVerificacao,
+      },
+    });
+
+    return `"${createHash('sha256').update(conteudo).digest('base64url')}"`;
   }
 
   /**

@@ -1,10 +1,18 @@
-import { Controller, Get, Param, Res, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Headers,
+  Param,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import {
   ApiTags,
   ApiBearerAuth,
   ApiOperation,
   ApiOkResponse,
+  ApiNotModifiedResponse,
   ApiNotFoundResponse,
   ApiForbiddenResponse,
   ApiUnauthorizedResponse,
@@ -50,16 +58,33 @@ export class CertificatePdfController {
     description: 'Id composto do certificado: "user-<id>" ou "guest-<id>".',
   })
   @ApiOkResponse({ description: 'PDF do certificado.' })
+  @ApiNotModifiedResponse({
+    description: 'O If-None-Match enviado bate com o ETag atual.',
+  })
   @ApiForbiddenResponse({ description: 'Não é o titular nem organizador.' })
   @ApiNotFoundResponse({ description: 'Certificado não encontrado.' })
   @ApiUnauthorizedResponse({ description: 'Token ausente ou inválido.' })
   async downloadPdf(
     @Param('id') id: string,
     @User() user: JwtPayload,
+    @Headers('if-none-match') ifNoneMatch: string | undefined,
     @Res() res: Response,
   ) {
-    const { buffer, filename } =
-      await this.certificatePdfService.buildCertificatePdf(id, user.sub);
+    const { etag, filename, render } =
+      await this.certificatePdfService.prepareCertificatePdf(id, user.sub);
+
+    res.setHeader('ETag', etag);
+    // no-cache manda revalidar sempre, não deixar de guardar. A revalidação
+    // custa uma consulta; um max-age serviria PDF vencido depois de uma
+    // reassinatura, que troca o QR Code e o código de verificação.
+    res.setHeader('Cache-Control', 'private, no-cache');
+
+    if (ifNoneMatch === etag) {
+      res.status(304).end();
+      return;
+    }
+
+    const buffer = await render();
 
     // @Res() desliga o ResponseInterceptor de propósito: o envelope
     // { statusCode, data } corromperia o binário do PDF.
