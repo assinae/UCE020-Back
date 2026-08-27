@@ -21,12 +21,14 @@ export class CertificateSignatureService {
     const assinanteNome =
       (await this.repo.findUsuarioNome(userId)) ?? 'Organizador';
 
-    const [eventoCerts, convidadoCerts] = await Promise.all([
+    const [eventoCerts, convidadoCerts, atividadeCerts] = await Promise.all([
       this.repo.findEventCertificatesToSign(eventoId, force),
       this.repo.findGuestCertificatesToSign(eventoId, force),
+      this.repo.findActivityCertificatesToSign(eventoId, force),
     ]);
 
-    const total = eventoCerts.length + convidadoCerts.length;
+    const total =
+      eventoCerts.length + convidadoCerts.length + atividadeCerts.length;
     if (total === 0) {
       throw new NotFoundException(
         force
@@ -36,7 +38,7 @@ export class CertificateSignatureService {
     }
 
     const resultados: {
-      tipo: 'evento' | 'convidado';
+      tipo: 'evento' | 'convidado' | 'atividade';
       certificadoId: number;
       titular: string;
       codigoVerificacao: string;
@@ -67,6 +69,24 @@ export class CertificateSignatureService {
       return { id: cert.id, codigoVerificacao: codigo, hashVerificacao: hash };
     });
 
+    const assinaturasAtividade = atividadeCerts.map((cert) => {
+      const { codigo, hash } = gerarAssinatura({
+        tipo: 'atividade',
+        certificadoId: cert.id,
+        titularNome: cert.participantName,
+        dataEmissao: cert.dataEmissao,
+      });
+
+      resultados.push({
+        tipo: 'atividade',
+        certificadoId: cert.id,
+        titular: cert.participantName,
+        codigoVerificacao: codigo,
+      });
+
+      return { id: cert.id, codigoVerificacao: codigo, hashVerificacao: hash };
+    });
+
     const assinaturasConvidado = convidadoCerts.map((cert) => {
       const { codigo, hash } = gerarAssinatura({
         tipo: 'convidado',
@@ -87,10 +107,14 @@ export class CertificateSignatureService {
 
     await Promise.all([
       this.repo.setEventCertificateSignatures(assinaturasEvento, comuns),
+      this.repo.setActivityCertificateSignatures(assinaturasAtividade, comuns),
       this.repo.setGuestCertificateSignatures(assinaturasConvidado, comuns),
     ]);
 
-    const assinados = assinaturasEvento.length + assinaturasConvidado.length;
+    const assinados =
+      assinaturasEvento.length +
+      assinaturasAtividade.length +
+      assinaturasConvidado.length;
 
     return {
       message: `${assinados} certificado(s) assinado(s) em lote.`,

@@ -52,9 +52,15 @@ export class CertificatePdfService {
   ): Promise<CertificadoPdfPreparado> {
     const { kind, certificateId } = parseCertificateId(rawId);
 
-    return kind === 'guest'
-      ? this.prepareGuestCertificate(certificateId, userId)
-      : this.prepareParticipantCertificate(certificateId, userId);
+    if (kind === 'guest') {
+      return this.prepareGuestCertificate(certificateId, userId);
+    }
+
+    if (kind === 'activity') {
+      return this.prepareActivityCertificate(certificateId, userId);
+    }
+
+    return this.prepareParticipantCertificate(certificateId, userId);
   }
 
   private async prepareParticipantCertificate(
@@ -143,6 +149,53 @@ export class CertificatePdfService {
     };
   }
 
+  private async prepareActivityCertificate(
+    certificateId: number,
+    userId: number,
+  ): Promise<CertificadoPdfPreparado> {
+    const cert =
+      await this.repo.findActivityCertificateForRender(certificateId);
+    if (!cert) {
+      throw new NotFoundException('Certificado não encontrado.');
+    }
+
+    if (cert.usuarioId !== userId) {
+      await this.assertOrganizador(userId, cert.eventoId);
+    }
+
+    const dados = {
+      certificateId: cert.id,
+      participantName: cert.participantName,
+      role: mapParticipantRole(cert.role),
+      // renderParticipantCertificatePdf só tem um campo de "nome do contexto" —
+      // pra atividade, o certificado é sobre a atividade, não o evento inteiro.
+      eventName: cert.activityName,
+      contextLabel: 'atividade' as const,
+      workloadHours: cert.workloadHours,
+      location: cert.location,
+      eventDate: formatDateRange(cert.dataInicio, cert.dataFim),
+      issueDate: cert.dataEmissao,
+      assinante1Nome: cert.assinante1Nome ?? undefined,
+      assinante1Titulo: cert.assinante1Titulo ?? undefined,
+      assinante2Nome: cert.assinante2Nome ?? undefined,
+      assinante2Titulo: cert.assinante2Titulo ?? undefined,
+    };
+
+    const etag = this.calcularEtag('activity', dados, cert);
+
+    return {
+      etag,
+      filename: `Certificado Atividade - ${cert.participantName} - ${cert.activityName}.pdf`,
+      render: () =>
+        this.renderComCache(etag, async () =>
+          renderParticipantCertificatePdf({
+            ...dados,
+            assinatura: await this.montarAssinatura(cert),
+          }),
+        ),
+    };
+  }
+
   private async renderComCache(
     etag: string,
     renderizar: () => Promise<Buffer>,
@@ -161,7 +214,7 @@ export class CertificatePdfService {
    * viram ISO no JSON.stringify, então o resultado é estável entre processos.
    */
   private calcularEtag(
-    tipo: 'user' | 'guest',
+    tipo: 'user' | 'guest' | 'activity',
     dados: object,
     assinatura: EstadoAssinatura,
   ): string {
