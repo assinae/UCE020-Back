@@ -2,19 +2,28 @@ import { StyleSheet } from '@react-pdf/renderer';
 import { Font }       from '@react-pdf/renderer';
 import { join }       from 'path';
 
+/**
+ * Relativo a __dirname, não ao cwd: o nest-cli.json copia os .ttf para
+ * dist/src/resources/fonts, e é de lá que este arquivo compilado precisa ler.
+ * Com process.cwd() a leitura só funcionava se a pasta src/ original também
+ * estivesse no runtime — e falhava com ENOENT, sem fallback, derrubando todo
+ * download de certificado. Mesmo padrão de certificate.assets.ts.
+ */
+const FONTS_DIR = join(__dirname, '..', '..', '..', 'resources', 'fonts');
+
 Font.register({
   family: 'Poppins',
   fonts: [
     {
-      src: join(process.cwd(), 'src', 'resources', 'fonts', 'Poppins-Regular.ttf'),
+      src: join(FONTS_DIR, 'Poppins-Regular.ttf'),
       fontWeight: 400,
     },
     {
-      src: join(process.cwd(), 'src', 'resources', 'fonts', 'Poppins-Bold.ttf'),
+      src: join(FONTS_DIR, 'Poppins-Bold.ttf'),
       fontWeight: 700,
     },
     {
-      src: join(process.cwd(), 'src', 'resources', 'fonts', 'Poppins-Italic.ttf'),
+      src: join(FONTS_DIR, 'Poppins-Italic.ttf'),
       fontWeight: 400,
       fontStyle: 'italic'
     },
