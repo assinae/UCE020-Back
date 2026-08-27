@@ -31,8 +31,25 @@ export interface CertificadoPdfPreparado {
   render: () => Promise<Buffer>;
 }
 
-/** ~540 certificados de 118 kB. O pico medido sob carga foi de 524 MB. */
-const LIMITE_CACHE_BYTES = 64 * 1024 * 1024;
+/**
+ * Teto do cache, em MB, ajustável por `CERTIFICATE_PDF_CACHE_MB`.
+ *
+ * O default é conservador de propósito: o pico de RSS medido sob carga fria foi
+ * de ~400 MB, e o cache soma em cima disso. Com 16 MB (~135 PDFs de 118 kB) o
+ * pior caso fica em ~420 MB, o que cabe num container de 512 MB. Instância com
+ * mais memória pode subir esse número — o ganho do cache satura rápido, porque
+ * o conjunto de certificados ativos num evento real é bem menor que 135.
+ */
+function tetoCacheMb(): number {
+  const bruto = process.env.CERTIFICATE_PDF_CACHE_MB;
+  // Vazio e ausente caem no default; 0 explícito desliga o cache.
+  if (bruto === undefined || bruto.trim() === '') return 16;
+
+  const mb = Number(bruto);
+  return Number.isFinite(mb) && mb >= 0 ? mb : 16;
+}
+
+const LIMITE_CACHE_BYTES = tetoCacheMb() * 1024 * 1024;
 
 /** Monta o PDF no momento do download, a partir das colunas do banco. */
 @Injectable()
