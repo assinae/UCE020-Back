@@ -81,6 +81,27 @@ Decompõe o custo unitário chamando o `dist/` direto, sem HTTP: round-trip ao
 banco, query de render, QR e renderização do PDF isolados.
 
 ```bash
+node test/load/smoke-certificados.cjs
+```
+
+Renderiza **todos** os certificados reais do banco pelo endpoint sob demanda,
+cada um baixado pelo próprio titular, e sai com código 1 se algum falhar. É a
+porta antes de promover para produção: a massa sintética do `seed.cjs` tem
+campos limpos, enquanto os certificados antigos têm assinante nulo, evento sem
+carga horária e nome com acento.
+
+```bash
+node test/load/atividade-e2e.cjs --atividade=29 --evento=53
+node test/load/atividade-e2e.cjs --atividade=29 --revert
+```
+
+Exercita o fluxo de certificado por atividade ponta a ponta: recusa sem a flag
+`gerar_certificado`, emissão, idempotência, assinatura em lote, download do PDF,
+presença nas listagens e verificação pública. Precisa de uma atividade
+finalizada com presença registrada. O `--revert` apaga os certificados criados e
+devolve `gerar_certificado` para `false`.
+
+```bash
 node test/load/cleanup.cjs
 ```
 
