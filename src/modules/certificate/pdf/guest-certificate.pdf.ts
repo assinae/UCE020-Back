@@ -1,48 +1,53 @@
 import * as React from 'react';
 import { Document, Page, Text, View, Image, pdf } from '@react-pdf/renderer';
-import { streamToBuffer }       from './stream-to-buffer';
+import { streamToBuffer } from './stream-to-buffer';
 import { certificateStyles as styles } from './certificate.styles';
-import { LOGO_ASSINAE_SRC, LOGO_UEFS_SRC } from 'src/resources/certificatesConfig/certificate.assets';
+import { formatDate } from './format-date-range';
+import {
+  LOGO_ASSINAE_SRC,
+  LOGO_UEFS_SRC,
+} from 'src/resources/certificatesConfig/certificate.assets';
 
 export type GuestCertificateData = {
-  certificateId:     number;
-  guestName:         string;
-  role:              string;
-  eventName:         string;
-  activityName:      string;
-  workloadHours?:    number | null;
-  location:          string;
-  eventDate:         string;
-  issueDate:         Date;
-  assinante1Nome?:   string;
+  certificateId: number;
+  guestName: string;
+  role: string;
+  eventName: string;
+  activityName: string;
+  workloadHours?: number | null;
+  location: string;
+  eventDate: string;
+  issueDate: Date;
+  assinante1Nome?: string;
   assinante1Titulo?: string;
-  assinante2Nome?:   string;
+  assinante2Nome?: string;
   assinante2Titulo?: string;
   // Dados da assinatura digital (preenchidos no ato da assinatura).
   assinatura?: {
-    nome:   string;
-    data:   string;
+    nome: string;
+    data: string;
     codigo: string;
-    qr?:    { data: Buffer; format: 'png' };
+    qr?: { data: Buffer; format: 'png' };
   };
 };
 
 const GUEST_CERT_TITLE: Record<string, string> = {
   Palestrante: 'CERTIFICADO DE PALESTRANTE',
   Ministrante: 'CERTIFICADO DE MINISTRANTE',
-  Moderador:   'CERTIFICADO DE MODERADOR',
+  Moderador: 'CERTIFICADO DE MODERADOR',
 };
 
 const GUEST_ROLE_VERB: Record<string, string> = {
   Palestrante: 'palestrou na atividade',
   Ministrante: 'ministrou a atividade',
-  Moderador:   'moderou a atividade',
+  Moderador: 'moderou a atividade',
 };
 
 function buildDocument(data: GuestCertificateData) {
   const e = React.createElement;
-  const certTitle = GUEST_CERT_TITLE[data.role] ?? 'CERTIFICADO DE PARTICIPAÇÃO';
-  const roleVerb  = GUEST_ROLE_VERB[data.role]  ?? 'participou da atividade';
+  const certTitle =
+    GUEST_CERT_TITLE[data.role] ?? 'CERTIFICADO DE PARTICIPAÇÃO';
+  const roleVerb = GUEST_ROLE_VERB[data.role] ?? 'participou da atividade';
 
   return e(
     Document,
@@ -206,7 +211,7 @@ function buildDocument(data: GuestCertificateData) {
           e(
             Text,
             { style: styles.footerLeft },
-            `Emitido em ${data.issueDate.toLocaleDateString('pt-BR', { timeZone: 'America/Bahia' })}`,
+            `Emitido em ${formatDate(data.issueDate)}`,
           ),
           e(
             Text,

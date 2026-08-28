@@ -6,9 +6,11 @@ assinou, quando, com um código e um hash de integridade) e o PDF é **regerado*
 com o bloco de assinatura **centralizado** no corpo do certificado (onde antes
 ficavam as linhas). Não usa certificado criptográfico (.pfx/ICP‑Brasil).
 
-Os PDFs ficam no **Supabase Storage** (não mais no disco local). Como cada upload
-gera um objeto novo, ao assinar o back **sobe o PDF assinado, atualiza a coluna
-`arquivo_pdf` com a nova URL e remove o arquivo antigo do bucket**.
+O PDF **não é armazenado**. Ele é montado sob demanda em
+`GET /api/v1/certificate/:id/pdf`, a partir das colunas do banco — assinar grava
+apenas essas colunas, sem arquivo para regerar nem subir. Consequência prática:
+ajuste no template vale para todos os certificados no próximo download, e o
+documento nunca fica desatualizado em relação ao banco.
 
 ## O que foi implementado (back)
 
@@ -27,12 +29,11 @@ gera um objeto novo, ao assinar o back **sobe o PDF assinado, atualiza a coluna
   (Assinaê), o **nome completo de quem assina**, a **data** e o **código** de
   verificação. O bloco é preenchido re‑renderizando o PDF no ato da assinatura
   (nada de carimbo por cima), o que garante o alinhamento central.
-- **`storage/certificate-file-storage.service.ts`** (via
-  `common/storage/supabase-storage.service.ts`): faz upload do PDF para o bucket
-  do Supabase e remove arquivos antigos.
+- **`certificate-pdf.service.ts`** e **`controller/certificate-pdf.controller.ts`**:
+  montam o PDF no momento do download, a partir das colunas. Só o titular do
+  certificado ou um organizador do evento consegue baixar.
 - **`signature/certificate-signature.service.ts`**: orquestra a assinatura em
-  lote (só organizador). Re‑renderiza o PDF com a assinatura, faz upload no
-  Supabase, atualiza `arquivo_pdf`, remove o arquivo antigo e faz a verificação
+  lote (só organizador). Grava as colunas de assinatura e faz a verificação
   pública.
 - **`repository/certificate.respository.ts`**: buscas dos certificados (com os
   dados para re‑render), gravação/reset da assinatura e busca por código.
@@ -87,8 +88,10 @@ Authorization: Bearer <token>
 Assina **todos** os certificados ainda não assinados do evento (participantes e
 convidados). Idempotente: rodar de novo só assina os que faltam.
 
-Para **reassinar** os que já estão assinados (regera o PDF do zero — útil após
-mudança de layout), use `?force=true`:
+`?force=true` reassina também os já assinados, gerando **código e hash novos**.
+Mudança de layout não exige mais isso: o PDF é montado no download, então
+qualquer ajuste no template já vale para todo mundo. Use com cuidado — rotacionar
+o código **invalida os QR Codes já distribuídos**.
 
 ```
 POST /api/v1/event/:eventoId/certificate/sign?force=true
@@ -102,7 +105,7 @@ Resposta:
     "message": "12 certificado(s) assinado(s) em lote.",
     "data": {
       "assinados": 12,
-      "semArquivo": 0,
+
       "assinante": "Maria Organizadora",
       "certificados": [
         { "tipo": "evento", "certificadoId": 45, "titular": "João Silva", "codigoVerificacao": "A1B2-C3D4-E5F6" }
@@ -186,20 +189,16 @@ async function verificarCertificado(codigo: string) {
 
 ### Observações
 
-- Depois de assinar, a coluna `arquivo_pdf` passa a apontar para a **nova URL** do
-  Supabase (o PDF assinado) e o arquivo antigo é removido do bucket. O front deve
-  reler a lista para pegar a URL atualizada.
-- Só assina certificados que já têm PDF gerado. Emita os certificados antes de assinar.
-- Requer `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` no `.env` (o service falha no
-  boot sem elas). Bucket em `SUPABASE_STORAGE_BUCKET`; os PDFs vão para a pasta `Outros/`.
+- Assinar grava só colunas. O bloco de assinatura aparece na próxima vez que o
+  PDF for baixado — não há URL para o front reler.
+- Emita os certificados antes de assinar: a assinatura age sobre as linhas que já
+  existem.
+- A coluna `arquivo_pdf` continua no schema com as URLs antigas, mas nada mais a
+  lê nem a escreve. Ela e os arquivos no bucket são lixo a ser removido.
 - O front pode esconder/desabilitar o botão quando não houver pendências.
 
-### Re-testar em certificados antigos (ex.: nº 32/34)
+### Mudança de layout
 
-Certificados emitidos/assinados **antes** dessa mudança têm o layout antigo
-"queimado" no arquivo. Para atualizá‑los sem criar dados novos, com o servidor já
-reconstruído (`npm install` + `npm run build`/restart):
-
-1. Reassine em lote: `POST /event/:eventoId/certificate/sign?force=true` — como a
-   assinatura **regera o PDF do zero** (novo upload no Supabase + troca da URL),
-   isso já produz o certificado novo, limpo, com a assinatura centralizada.
+Não exige mais reassinatura. Como o PDF é montado no download, qualquer ajuste
+nos templates de `pdf/` passa a valer para **todos** os certificados — inclusive
+os emitidos antes da mudança — na próxima vez que forem baixados.

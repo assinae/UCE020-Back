@@ -51,6 +51,7 @@ export class ActivityService {
         cargaHoraria: dto.workload ?? 0,
         status: 'pendente',
         foto: dto.foto,
+        gerarCertificado: dto.generateCertificate ?? false,
         eventoId: dto.eventId,
       })
       .returning();
@@ -376,6 +377,8 @@ export class ActivityService {
           ? parseEventDate(dto.endDate)
           : currentActivity.dataFim,
         foto: dto.foto ?? currentActivity.foto,
+        gerarCertificado:
+          dto.generateCertificate ?? currentActivity.gerarCertificado,
       })
       .where(eq(tabelaAtividade.id, id))
       .returning();

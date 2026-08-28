@@ -2,61 +2,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { assertEventOrganizer } from 'src/common/helpers/assert-event-organizer.helper';
 import { CertificateRepository } from '../repository/certificate.respository';
-import { CertificateFileStorageService } from '../storage/certificate-file-storage.service';
-import { renderParticipantCertificatePdf } from '../pdf/participant-certificate.pdf';
-import { renderGuestCertificatePdf } from '../pdf/guest-certificate.pdf';
-import { formatDateRange } from '../pdf/format-date-range';
 import { gerarAssinatura, normalizarCodigo } from './verification-hash';
-import { gerarQrPng } from './qr';
 import { formatBahiaDate } from 'src/common/helpers/bahia-date.helper';
-
-const PUBLIC_BASE_URL =
-  process.env.PUBLIC_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3001}`;
-
-const ROLE_PARTICIPANTE: Record<string, string> = {
-  participante: 'Ouvinte',
-  monitor: 'Monitor',
-  organizador: 'Organizador',
-};
-const ROLE_CONVIDADO: Record<string, string> = {
-  palestrante: 'Palestrante',
-  ministrante: 'Ministrante',
-  moderador: 'Moderador',
-};
 
 @Injectable()
 export class CertificateSignatureService {
-  constructor(
-    private readonly repo: CertificateRepository,
-    private readonly fileStorage: CertificateFileStorageService,
-  ) {}
-
-  private urlVerificacao(codigo: string): string {
-    // QR aponta para a rota do FRONT: {FRONTEND_URL}/certificate/verify/{codigo}
-    // Pode ser sobrescrito por CERTIFICATE_VERIFY_URL.
-    const frontBase = (process.env.FRONTEND_URL ?? PUBLIC_BASE_URL).replace(
-      /\/$/,
-      '',
-    );
-    const base =
-      process.env.CERTIFICATE_VERIFY_URL ?? `${frontBase}/certificate/verify`;
-    return `${base.replace(/\/$/, '')}/${codigo}`;
-  }
-
-  private formatarDataHora(data: Date): string {
-    return new Intl.DateTimeFormat('pt-BR', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-      timeZone: 'America/Bahia',
-    }).format(data);
-  }
+  constructor(private readonly repo: CertificateRepository) {}
 
   /**
    * Assina EM LOTE os certificados do evento (participantes + convidados).
-   * A assinatura é embutida re-renderizando o PDF, ficando centralizada no
-   * corpo do certificado (logo do sistema + nome de quem assina + data + QR).
    *
-   * @param force quando true, reassina também os já assinados (regera o PDF).
+   * @param force reassina os já assinados, gerando código e hash novos — o que
+   * invalida os QR Codes já distribuídos.
    */
   async signEventCertificates(eventoId: number, userId: number, force = false) {
     await assertEventOrganizer(userId, eventoId);
@@ -64,12 +21,14 @@ export class CertificateSignatureService {
     const assinanteNome =
       (await this.repo.findUsuarioNome(userId)) ?? 'Organizador';
 
-    const [eventoCerts, convidadoCerts] = await Promise.all([
+    const [eventoCerts, convidadoCerts, atividadeCerts] = await Promise.all([
       this.repo.findEventCertificatesToSign(eventoId, force),
       this.repo.findGuestCertificatesToSign(eventoId, force),
+      this.repo.findActivityCertificatesToSign(eventoId, force),
     ]);
 
-    const total = eventoCerts.length + convidadoCerts.length;
+    const total =
+      eventoCerts.length + convidadoCerts.length + atividadeCerts.length;
     if (total === 0) {
       throw new NotFoundException(
         force
@@ -78,153 +37,89 @@ export class CertificateSignatureService {
       );
     }
 
-    let assinados = 0;
-    let semArquivo = 0;
     const resultados: {
-      tipo: 'evento' | 'convidado';
+      tipo: 'evento' | 'convidado' | 'atividade';
       certificadoId: number;
       titular: string;
       codigoVerificacao: string;
     }[] = [];
 
-    // ---- Certificados de participante ----
-    for (const cert of eventoCerts) {
-      if (!cert.arquivoPdf) {
-        semArquivo++;
-        continue;
-      }
+    const assinadoEm = new Date();
+    const comuns = {
+      assinadoEm,
+      assinadoPor: userId,
+      assinaturaNome: assinanteNome,
+    };
 
+    const assinaturasEvento = eventoCerts.map((cert) => {
       const { codigo, hash } = gerarAssinatura({
         tipo: 'evento',
         certificadoId: cert.id,
         titularNome: cert.participantName,
         dataEmissao: cert.dataEmissao,
       });
-      const assinadoEm = new Date();
-      const qr = await gerarQrPng(this.urlVerificacao(codigo));
 
-      const pdf = await renderParticipantCertificatePdf({
-        certificateId: cert.id,
-        participantName: cert.participantName,
-        role: ROLE_PARTICIPANTE[cert.role] ?? cert.role,
-        eventName: cert.eventName,
-        workloadHours: cert.workloadHours,
-        location: cert.location,
-        eventDate: formatDateRange(cert.dataInicio, cert.dataFim),
-        issueDate: cert.dataEmissao,
-        assinatura: {
-          nome: assinanteNome,
-          data: this.formatarDataHora(assinadoEm),
-          codigo,
-          qr: qr ? { data: qr, format: 'png' } : undefined,
-        },
-      });
-
-      // Supabase gera um objeto novo a cada upload: subimos o PDF assinado,
-      // atualizamos a URL no banco e removemos o arquivo antigo do bucket.
-      const novaUrl = await this.fileStorage.saveParticipantCertificatePdf(
-        cert.id,
-        cert.eventName,
-        cert.participantName,
-        pdf,
-      );
-      try {
-        await this.repo.setUserCertificateFile(cert.id, novaUrl);
-      } catch (error) {
-        await this.fileStorage.remove(novaUrl);
-        throw error;
-      }
-      if (cert.arquivoPdf && cert.arquivoPdf !== novaUrl) {
-        await this.fileStorage.remove(cert.arquivoPdf);
-      }
-      await this.repo.setEventCertificateSignature(cert.id, {
-        assinadoEm,
-        assinadoPor: userId,
-        assinaturaNome: assinanteNome,
-        codigoVerificacao: codigo,
-        hashVerificacao: hash,
-      });
-
-      assinados++;
       resultados.push({
         tipo: 'evento',
         certificadoId: cert.id,
         titular: cert.participantName,
         codigoVerificacao: codigo,
       });
-    }
 
-    // ---- Certificados de convidado ----
-    for (const cert of convidadoCerts) {
-      if (!cert.arquivoPdf) {
-        semArquivo++;
-        continue;
-      }
+      return { id: cert.id, codigoVerificacao: codigo, hashVerificacao: hash };
+    });
 
+    const assinaturasAtividade = atividadeCerts.map((cert) => {
+      const { codigo, hash } = gerarAssinatura({
+        tipo: 'atividade',
+        certificadoId: cert.id,
+        titularNome: cert.participantName,
+        dataEmissao: cert.dataEmissao,
+      });
+
+      resultados.push({
+        tipo: 'atividade',
+        certificadoId: cert.id,
+        titular: cert.participantName,
+        codigoVerificacao: codigo,
+      });
+
+      return { id: cert.id, codigoVerificacao: codigo, hashVerificacao: hash };
+    });
+
+    const assinaturasConvidado = convidadoCerts.map((cert) => {
       const { codigo, hash } = gerarAssinatura({
         tipo: 'convidado',
         certificadoId: cert.id,
         titularNome: cert.guestName,
         dataEmissao: cert.dataEmissao,
       });
-      const assinadoEm = new Date();
-      const qr = await gerarQrPng(this.urlVerificacao(codigo));
 
-      const pdf = await renderGuestCertificatePdf({
-        certificateId: cert.id,
-        guestName: cert.guestName,
-        role: ROLE_CONVIDADO[cert.role] ?? cert.role,
-        eventName: cert.eventName,
-        activityName: cert.activityName,
-        workloadHours: cert.workloadHours,
-        location: cert.location,
-        eventDate: formatDateRange(cert.dataInicio, cert.dataFim),
-        issueDate: cert.dataEmissao,
-        assinatura: {
-          nome: assinanteNome,
-          data: this.formatarDataHora(assinadoEm),
-          codigo,
-          qr: qr ? { data: qr, format: 'png' } : undefined,
-        },
-      });
-
-      const novaUrl = await this.fileStorage.saveGuestCertificatePdf(
-        cert.id,
-        cert.guestName,
-        cert.activityName,
-        pdf,
-      );
-      try {
-        await this.repo.setGuestCertificateFile(cert.id, novaUrl);
-      } catch (error) {
-        await this.fileStorage.remove(novaUrl);
-        throw error;
-      }
-      if (cert.arquivoPdf && cert.arquivoPdf !== novaUrl) {
-        await this.fileStorage.remove(cert.arquivoPdf);
-      }
-      await this.repo.setGuestCertificateSignature(cert.id, {
-        assinadoEm,
-        assinadoPor: userId,
-        assinaturaNome: assinanteNome,
-        codigoVerificacao: codigo,
-        hashVerificacao: hash,
-      });
-
-      assinados++;
       resultados.push({
         tipo: 'convidado',
         certificadoId: cert.id,
         titular: cert.guestName,
         codigoVerificacao: codigo,
       });
-    }
+
+      return { id: cert.id, codigoVerificacao: codigo, hashVerificacao: hash };
+    });
+
+    await Promise.all([
+      this.repo.setEventCertificateSignatures(assinaturasEvento, comuns),
+      this.repo.setActivityCertificateSignatures(assinaturasAtividade, comuns),
+      this.repo.setGuestCertificateSignatures(assinaturasConvidado, comuns),
+    ]);
+
+    const assinados =
+      assinaturasEvento.length +
+      assinaturasAtividade.length +
+      assinaturasConvidado.length;
 
     return {
       message: `${assinados} certificado(s) assinado(s) em lote.`,
       data: {
         assinados,
-        semArquivo,
         reassinatura: force,
         assinante: assinanteNome,
         certificados: resultados,

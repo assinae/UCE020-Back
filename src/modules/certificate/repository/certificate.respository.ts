@@ -14,6 +14,7 @@ import {
   tabelaParticipacoesAtividades,
 } from 'src/db/schema';
 import { and, eq, or, sql, SQL } from 'drizzle-orm';
+import { PgTable } from 'drizzle-orm/pg-core';
 
 export interface EventoCertParaAssinar {
   id: number;
@@ -42,12 +43,30 @@ export interface ConvidadoCertParaAssinar {
   dataFim: Date;
 }
 
-export interface DadosAssinatura {
+export interface AtividadeCertParaAssinar {
+  id: number;
+  arquivoPdf: string | null;
+  dataEmissao: Date;
+  participantName: string;
+  role: string;
+  activityName: string;
+  workloadHours: number | null;
+  location: string;
+  dataInicio: Date;
+  dataFim: Date;
+}
+
+/** Código e hash são por certificado; o resto é igual para o lote inteiro. */
+export interface AssinaturaEmLote {
+  id: number;
+  codigoVerificacao: string;
+  hashVerificacao: string;
+}
+
+export interface DadosAssinaturaComuns {
   assinadoEm: Date;
   assinadoPor: number;
   assinaturaNome: string;
-  codigoVerificacao: string;
-  hashVerificacao: string;
 }
 
 export interface CertificadoVerificado {
@@ -60,6 +79,74 @@ export interface CertificadoVerificado {
   hashVerificacao: string | null;
 }
 
+/** usuarioId/eventoId voltam junto porque a autorização do download depende deles. */
+export interface EventoCertParaRender {
+  id: number;
+  usuarioId: number;
+  eventoId: number;
+  dataEmissao: Date;
+  participantName: string;
+  role: string;
+  eventName: string;
+  workloadHours: number | null;
+  location: string;
+  dataInicio: Date;
+  dataFim: Date;
+  assinante1Nome: string | null;
+  assinante1Titulo: string | null;
+  assinante2Nome: string | null;
+  assinante2Titulo: string | null;
+  assinado: boolean;
+  assinadoEm: Date | null;
+  assinaturaNome: string | null;
+  codigoVerificacao: string | null;
+}
+
+export interface ConvidadoCertParaRender {
+  id: number;
+  eventoId: number;
+  dataEmissao: Date;
+  guestName: string;
+  role: string;
+  eventName: string;
+  activityName: string;
+  workloadHours: number | null;
+  location: string;
+  dataInicio: Date;
+  dataFim: Date;
+  assinante1Nome: string | null;
+  assinante1Titulo: string | null;
+  assinante2Nome: string | null;
+  assinante2Titulo: string | null;
+  assinado: boolean;
+  assinadoEm: Date | null;
+  assinaturaNome: string | null;
+  codigoVerificacao: string | null;
+}
+
+/** usuarioId/eventoId voltam junto porque a autorização do download depende deles. */
+export interface AtividadeCertParaRender {
+  id: number;
+  usuarioId: number;
+  eventoId: number;
+  dataEmissao: Date;
+  participantName: string;
+  role: string;
+  eventName: string;
+  activityName: string;
+  workloadHours: number | null;
+  location: string;
+  dataInicio: Date;
+  dataFim: Date;
+  assinante1Nome: string | null;
+  assinante1Titulo: string | null;
+  assinante2Nome: string | null;
+  assinante2Titulo: string | null;
+  assinado: boolean;
+  assinadoEm: Date | null;
+  assinaturaNome: string | null;
+  codigoVerificacao: string | null;
+}
 @Injectable()
 export class CertificateRepository {
   private userCertificateQuery(condition: SQL) {
@@ -132,25 +219,73 @@ export class CertificateRepository {
       .where(condition);
   }
 
+  private activityCertificateQuery(condition: SQL) {
+    return db
+      .select({
+        id: tabelaCertificadoAtividade.id,
+        dataEmissao: tabelaCertificadoAtividade.dataEmissao,
+        participantName: tabelaUsuario.nome,
+        participantEmail: tabelaUsuario.email,
+        role: tabelaParticipacoes.tipo,
+        location: tabelaAtividade.localizacao,
+        activityTitle: tabelaAtividade.nome,
+        activityHours: tabelaAtividade.cargaHoraria,
+        arquivoPdf: tabelaCertificadoAtividade.arquivoPdf,
+      })
+      .from(tabelaCertificadoAtividade)
+      .innerJoin(
+        tabelaUsuario,
+        eq(tabelaCertificadoAtividade.usuarioId, tabelaUsuario.id),
+      )
+      .innerJoin(
+        tabelaAtividade,
+        eq(tabelaCertificadoAtividade.atividadeId, tabelaAtividade.id),
+      )
+      .innerJoin(
+        tabelaParticipacoes,
+        and(
+          eq(
+            tabelaParticipacoes.usuarioId,
+            tabelaCertificadoAtividade.usuarioId,
+          ),
+          eq(tabelaParticipacoes.eventoId, tabelaAtividade.eventoId),
+        ),
+      )
+      .where(condition);
+  }
+
   async findByEvent(eventoId: number, page: number, limit: number) {
-    const [userRows, guestRows] = await Promise.all([
+    const [userRows, guestRows, activityRows] = await Promise.all([
       this.userCertificateQuery(eq(tabelaCertificadoEvento.eventoId, eventoId)),
       this.guestCertificateQuery(eq(tabelaAtividade.eventoId, eventoId)),
+      this.activityCertificateQuery(eq(tabelaAtividade.eventoId, eventoId)),
     ]);
 
     const offset = (page - 1) * limit;
-    return [...userRows, ...guestRows]
+    return [
+      ...userRows.map((row) => ({ ...row, kind: 'user' as const })),
+      ...guestRows.map((row) => ({ ...row, kind: 'guest' as const })),
+      ...activityRows.map((row) => ({ ...row, kind: 'activity' as const })),
+    ]
       .sort((a, b) => b.dataEmissao.getTime() - a.dataEmissao.getTime())
       .slice(offset, offset + limit);
   }
 
   async findByUser(usuarioId: number, page: number, limit: number) {
-    const rows = await this.userCertificateQuery(
-      eq(tabelaCertificadoEvento.usuarioId, usuarioId),
-    );
+    const [userRows, activityRows] = await Promise.all([
+      this.userCertificateQuery(
+        eq(tabelaCertificadoEvento.usuarioId, usuarioId),
+      ),
+      this.activityCertificateQuery(
+        eq(tabelaCertificadoAtividade.usuarioId, usuarioId),
+      ),
+    ]);
 
     const offset = (page - 1) * limit;
-    return rows
+    return [
+      ...userRows.map((row) => ({ ...row, kind: 'user' as const })),
+      ...activityRows.map((row) => ({ ...row, kind: 'activity' as const })),
+    ]
       .sort((a, b) => b.dataEmissao.getTime() - a.dataEmissao.getTime())
       .slice(offset, offset + limit);
   }
@@ -159,14 +294,21 @@ export class CertificateRepository {
     const [row] = await this.userCertificateQuery(
       eq(tabelaCertificadoEvento.id, certificateId),
     );
-    return row;
+    return row ? { ...row, kind: 'user' as const } : undefined;
   }
 
   async findGuestCertificateById(certificateId: number) {
     const [row] = await this.guestCertificateQuery(
       eq(tabelaCertificadoConvidado.id, certificateId),
     );
-    return row;
+    return row ? { ...row, kind: 'guest' as const } : undefined;
+  }
+
+  async findActivityCertificateById(certificateId: number) {
+    const [row] = await this.activityCertificateQuery(
+      eq(tabelaCertificadoAtividade.id, certificateId),
+    );
+    return row ? { ...row, kind: 'activity' as const } : undefined;
   }
 
   async countByEvent(eventoId: number): Promise<number> {
@@ -221,12 +363,13 @@ export class CertificateRepository {
         localizacao: tabelaAtividade.localizacao,
         dataInicio: tabelaAtividade.dataInicio,
         dataFim: tabelaAtividade.dataFim,
+        gerarCertificado: tabelaAtividade.gerarCertificado,
         eventoId: tabelaAtividade.eventoId,
         eventoNome: tabelaEvento.nome,
-        assinante1Nome:   tabelaEvento.assinante1Nome,   
-        assinante1Titulo: tabelaEvento.assinante1Titulo, 
-        assinante2Nome:   tabelaEvento.assinante2Nome,   
-        assinante2Titulo: tabelaEvento.assinante2Titulo, 
+        assinante1Nome: tabelaEvento.assinante1Nome,
+        assinante1Titulo: tabelaEvento.assinante1Titulo,
+        assinante2Nome: tabelaEvento.assinante2Nome,
+        assinante2Titulo: tabelaEvento.assinante2Titulo,
       })
       .from(tabelaAtividade)
       .innerJoin(tabelaEvento, eq(tabelaAtividade.eventoId, tabelaEvento.id))
@@ -264,11 +407,47 @@ export class CertificateRepository {
     return db.insert(tabelaCertificadoConvidado).values(rows).returning();
   }
 
-  async setGuestCertificateFile(certificateId: number, arquivoPdf: string) {
-    await db
-      .update(tabelaCertificadoConvidado)
-      .set({ arquivoPdf })
-      .where(eq(tabelaCertificadoConvidado.id, certificateId));
+  /** Participantes com presença confirmada em uma atividade específica (candidatos ao certificado de atividade). */
+  async findPresentParticipantsByActivity(atividadeId: number) {
+    return db
+      .select({
+        usuarioId: tabelaUsuario.id,
+        nome: tabelaUsuario.nome,
+        email: tabelaUsuario.email,
+        tipo: tabelaParticipacoes.tipo,
+      })
+      .from(tabelaParticipacoesAtividades)
+      .innerJoin(
+        tabelaParticipacoes,
+        eq(
+          tabelaParticipacoesAtividades.participacaoId,
+          tabelaParticipacoes.id,
+        ),
+      )
+      .innerJoin(
+        tabelaUsuario,
+        eq(tabelaParticipacoes.usuarioId, tabelaUsuario.id),
+      )
+      .where(
+        and(
+          eq(tabelaParticipacoesAtividades.atividadeId, atividadeId),
+          eq(tabelaParticipacoesAtividades.presente, true),
+        ),
+      );
+  }
+
+  async findExistingActivityCertificatesByActivity(atividadeId: number) {
+    return db
+      .select()
+      .from(tabelaCertificadoAtividade)
+      .where(eq(tabelaCertificadoAtividade.atividadeId, atividadeId));
+  }
+
+  async insertActivityCertificates(
+    rows: { usuarioId: number; atividadeId: number; dataEmissao: Date }[],
+  ) {
+    if (!rows.length) return [];
+    return db.insert(tabelaCertificadoAtividade).values(rows).returning();
   }
 
   async findEventForCertificate(eventoId: number) {
@@ -281,9 +460,9 @@ export class CertificateRepository {
         localizacao: tabelaEvento.localizacao,
         dataInicio: tabelaEvento.dataInicio,
         dataFim: tabelaEvento.dataFim,
-        assinante1Nome:   tabelaEvento.assinante1Nome,   
-        assinante1Titulo: tabelaEvento.assinante1Titulo, 
-        assinante2Nome:   tabelaEvento.assinante2Nome,   
+        assinante1Nome: tabelaEvento.assinante1Nome,
+        assinante1Titulo: tabelaEvento.assinante1Titulo,
+        assinante2Nome: tabelaEvento.assinante2Nome,
         assinante2Titulo: tabelaEvento.assinante2Titulo,
       })
       .from(tabelaEvento)
@@ -306,7 +485,10 @@ export class CertificateRepository {
       )
       .leftJoin(
         tabelaParticipacoesAtividades,
-        eq(tabelaParticipacoes.id, tabelaParticipacoesAtividades.participacaoId),
+        eq(
+          tabelaParticipacoes.id,
+          tabelaParticipacoesAtividades.participacaoId,
+        ),
       )
       .where(
         and(
@@ -317,9 +499,9 @@ export class CertificateRepository {
               eq(tabelaParticipacoesAtividades.presente, true),
             ),
             eq(tabelaParticipacoes.tipo, 'organizador'),
-            eq(tabelaParticipacoes.tipo, 'monitor')
-          )
-        )
+            eq(tabelaParticipacoes.tipo, 'monitor'),
+          ),
+        ),
       )
       .groupBy(
         tabelaUsuario.id,
@@ -341,13 +523,6 @@ export class CertificateRepository {
   ) {
     if (!rows.length) return [];
     return db.insert(tabelaCertificadoEvento).values(rows).returning();
-  }
-
-  async setUserCertificateFile(certificateId: number, arquivoPdf: string) {
-    await db
-      .update(tabelaCertificadoEvento)
-      .set({ arquivoPdf })
-      .where(eq(tabelaCertificadoEvento.id, certificateId));
   }
 
   // ======================================================================
@@ -442,10 +617,7 @@ export class CertificateRepository {
         tabelaAtividade,
         eq(tabelaCertificadoConvidado.atividadeId, tabelaAtividade.id),
       )
-      .innerJoin(
-        tabelaEvento,
-        eq(tabelaAtividade.eventoId, tabelaEvento.id),
-      )
+      .innerJoin(tabelaEvento, eq(tabelaAtividade.eventoId, tabelaEvento.id))
       .innerJoin(
         tabelaConvidado,
         eq(tabelaCertificadoConvidado.convidadoId, tabelaConvidado.id),
@@ -466,25 +638,125 @@ export class CertificateRepository {
       .where(cond);
   }
 
-  async setEventCertificateSignature(id: number, dados: DadosAssinatura) {
-    await db
-      .update(tabelaCertificadoEvento)
-      .set({ assinado: true, ...dados })
-      .where(eq(tabelaCertificadoEvento.id, id));
+  /**
+   * Certificados de atividade (participante presente em uma atividade específica
+   * do evento) para assinar, com dados completos para re-renderizar o PDF.
+   */
+  async findActivityCertificatesToSign(
+    eventoId: number,
+    incluirAssinados = false,
+  ): Promise<AtividadeCertParaAssinar[]> {
+    const cond = incluirAssinados
+      ? eq(tabelaAtividade.eventoId, eventoId)
+      : and(
+          eq(tabelaAtividade.eventoId, eventoId),
+          eq(tabelaCertificadoAtividade.assinado, false),
+        );
+    return db
+      .select({
+        id: tabelaCertificadoAtividade.id,
+        arquivoPdf: tabelaCertificadoAtividade.arquivoPdf,
+        dataEmissao: tabelaCertificadoAtividade.dataEmissao,
+        participantName: tabelaUsuario.nome,
+        role: tabelaParticipacoes.tipo,
+        activityName: tabelaAtividade.nome,
+        workloadHours: tabelaAtividade.cargaHoraria,
+        location: tabelaAtividade.localizacao,
+        dataInicio: tabelaAtividade.dataInicio,
+        dataFim: tabelaAtividade.dataFim,
+      })
+      .from(tabelaCertificadoAtividade)
+      .innerJoin(
+        tabelaAtividade,
+        eq(tabelaCertificadoAtividade.atividadeId, tabelaAtividade.id),
+      )
+      .innerJoin(
+        tabelaUsuario,
+        eq(tabelaCertificadoAtividade.usuarioId, tabelaUsuario.id),
+      )
+      .innerJoin(
+        tabelaParticipacoes,
+        and(
+          eq(
+            tabelaParticipacoes.usuarioId,
+            tabelaCertificadoAtividade.usuarioId,
+          ),
+          eq(tabelaParticipacoes.eventoId, tabelaAtividade.eventoId),
+        ),
+      )
+      .where(cond);
   }
 
-  async setActivityCertificateSignature(id: number, dados: DadosAssinatura) {
-    await db
-      .update(tabelaCertificadoAtividade)
-      .set({ assinado: true, ...dados })
-      .where(eq(tabelaCertificadoAtividade.id, id));
+  async setEventCertificateSignatures(
+    assinaturas: AssinaturaEmLote[],
+    comuns: DadosAssinaturaComuns,
+  ) {
+    await this.gravarAssinaturasEmLote(
+      tabelaCertificadoEvento,
+      assinaturas,
+      comuns,
+    );
   }
 
-  async setGuestCertificateSignature(id: number, dados: DadosAssinatura) {
-    await db
-      .update(tabelaCertificadoConvidado)
-      .set({ assinado: true, ...dados })
-      .where(eq(tabelaCertificadoConvidado.id, id));
+  async setGuestCertificateSignatures(
+    assinaturas: AssinaturaEmLote[],
+    comuns: DadosAssinaturaComuns,
+  ) {
+    await this.gravarAssinaturasEmLote(
+      tabelaCertificadoConvidado,
+      assinaturas,
+      comuns,
+    );
+  }
+
+  async setActivityCertificateSignatures(
+    assinaturas: AssinaturaEmLote[],
+    comuns: DadosAssinaturaComuns,
+  ) {
+    await this.gravarAssinaturasEmLote(
+      tabelaCertificadoAtividade,
+      assinaturas,
+      comuns,
+    );
+  }
+
+  /**
+   * Grava o lote inteiro num comando só. A versão anterior fazia um UPDATE por
+   * id dentro de um for: um round-trip ao banco por certificado, o que dava
+   * ~64s para um evento de 500 participantes.
+   *
+   * O lote vai como um único parâmetro JSON em vez de arrays: o template `sql`
+   * do Drizzle achata array JS em lista de parâmetros (`$1, $2, ...`), o que
+   * vira um `record` e não casta para `int[]`. Como bônus, um parâmetro só
+   * nunca esbarra no teto de 65535 parâmetros do protocolo.
+   */
+  private async gravarAssinaturasEmLote(
+    tabela: PgTable,
+    assinaturas: AssinaturaEmLote[],
+    comuns: DadosAssinaturaComuns,
+  ) {
+    if (!assinaturas.length) return;
+
+    const lote = JSON.stringify(
+      assinaturas.map((a) => ({
+        id: a.id,
+        codigo: a.codigoVerificacao,
+        hash: a.hashVerificacao,
+      })),
+    );
+
+    await db.execute(sql`
+      update ${tabela} as cert
+         set assinado = true,
+             assinado_em = ${comuns.assinadoEm},
+             assinado_por = ${comuns.assinadoPor},
+             assinatura_nome = ${comuns.assinaturaNome},
+             codigo_verificacao = lote.codigo,
+             hash_verificacao = lote.hash
+        from json_to_recordset(${lote}::json)
+             as lote(id int, codigo text, hash text)
+       where cert.id = lote.id
+    `);
   }
 
   private readonly resetFields = {
@@ -580,5 +852,177 @@ export class CertificateRepository {
     if (convidado) return { tipo: 'convidado', ...convidado };
 
     return null;
+  }
+
+  async findEventCertificateForRender(
+    certificateId: number,
+  ): Promise<EventoCertParaRender | undefined> {
+    const [row] = await db
+      .select({
+        id: tabelaCertificadoEvento.id,
+        usuarioId: tabelaCertificadoEvento.usuarioId,
+        eventoId: tabelaCertificadoEvento.eventoId,
+        dataEmissao: tabelaCertificadoEvento.dataEmissao,
+        participantName: tabelaUsuario.nome,
+        role: tabelaParticipacoes.tipo,
+        eventName: tabelaEvento.nome,
+        workloadHours: tabelaEvento.cargaHoraria,
+        location: tabelaEvento.localizacao,
+        dataInicio: tabelaEvento.dataInicio,
+        dataFim: tabelaEvento.dataFim,
+        assinante1Nome: tabelaEvento.assinante1Nome,
+        assinante1Titulo: tabelaEvento.assinante1Titulo,
+        assinante2Nome: tabelaEvento.assinante2Nome,
+        assinante2Titulo: tabelaEvento.assinante2Titulo,
+        assinado: tabelaCertificadoEvento.assinado,
+        assinadoEm: tabelaCertificadoEvento.assinadoEm,
+        assinaturaNome: tabelaCertificadoEvento.assinaturaNome,
+        codigoVerificacao: tabelaCertificadoEvento.codigoVerificacao,
+      })
+      .from(tabelaCertificadoEvento)
+      .innerJoin(
+        tabelaUsuario,
+        eq(tabelaCertificadoEvento.usuarioId, tabelaUsuario.id),
+      )
+      .innerJoin(
+        tabelaEvento,
+        eq(tabelaCertificadoEvento.eventoId, tabelaEvento.id),
+      )
+      .innerJoin(
+        tabelaParticipacoes,
+        and(
+          eq(tabelaParticipacoes.usuarioId, tabelaCertificadoEvento.usuarioId),
+          eq(tabelaParticipacoes.eventoId, tabelaCertificadoEvento.eventoId),
+        ),
+      )
+      .where(eq(tabelaCertificadoEvento.id, certificateId));
+
+    return row;
+  }
+
+  async findGuestCertificateForRender(
+    certificateId: number,
+  ): Promise<ConvidadoCertParaRender | undefined> {
+    const [row] = await db
+      .select({
+        id: tabelaCertificadoConvidado.id,
+        eventoId: tabelaAtividade.eventoId,
+        dataEmissao: tabelaCertificadoConvidado.dataEmissao,
+        guestName: tabelaConvidado.nome,
+        role: tabelaConvidadoAtividade.funcao,
+        eventName: tabelaEvento.nome,
+        activityName: tabelaAtividade.nome,
+        workloadHours: tabelaAtividade.cargaHoraria,
+        location: tabelaAtividade.localizacao,
+        dataInicio: tabelaAtividade.dataInicio,
+        dataFim: tabelaAtividade.dataFim,
+        assinante1Nome: tabelaEvento.assinante1Nome,
+        assinante1Titulo: tabelaEvento.assinante1Titulo,
+        assinante2Nome: tabelaEvento.assinante2Nome,
+        assinante2Titulo: tabelaEvento.assinante2Titulo,
+        assinado: tabelaCertificadoConvidado.assinado,
+        assinadoEm: tabelaCertificadoConvidado.assinadoEm,
+        assinaturaNome: tabelaCertificadoConvidado.assinaturaNome,
+        codigoVerificacao: tabelaCertificadoConvidado.codigoVerificacao,
+      })
+      .from(tabelaCertificadoConvidado)
+      .innerJoin(
+        tabelaAtividade,
+        eq(tabelaCertificadoConvidado.atividadeId, tabelaAtividade.id),
+      )
+      .innerJoin(tabelaEvento, eq(tabelaAtividade.eventoId, tabelaEvento.id))
+      .innerJoin(
+        tabelaConvidado,
+        eq(tabelaCertificadoConvidado.convidadoId, tabelaConvidado.id),
+      )
+      .innerJoin(
+        tabelaConvidadoAtividade,
+        and(
+          eq(
+            tabelaConvidadoAtividade.convidadoId,
+            tabelaCertificadoConvidado.convidadoId,
+          ),
+          eq(
+            tabelaConvidadoAtividade.atividadeId,
+            tabelaCertificadoConvidado.atividadeId,
+          ),
+        ),
+      )
+      .where(eq(tabelaCertificadoConvidado.id, certificateId));
+
+    return row;
+  }
+
+  async findActivityCertificateForRender(
+    certificateId: number,
+  ): Promise<AtividadeCertParaRender | undefined> {
+    const [row] = await db
+      .select({
+        id: tabelaCertificadoAtividade.id,
+        usuarioId: tabelaCertificadoAtividade.usuarioId,
+        eventoId: tabelaAtividade.eventoId,
+        dataEmissao: tabelaCertificadoAtividade.dataEmissao,
+        participantName: tabelaUsuario.nome,
+        role: tabelaParticipacoes.tipo,
+        eventName: tabelaEvento.nome,
+        activityName: tabelaAtividade.nome,
+        workloadHours: tabelaAtividade.cargaHoraria,
+        location: tabelaAtividade.localizacao,
+        dataInicio: tabelaAtividade.dataInicio,
+        dataFim: tabelaAtividade.dataFim,
+        assinante1Nome: tabelaEvento.assinante1Nome,
+        assinante1Titulo: tabelaEvento.assinante1Titulo,
+        assinante2Nome: tabelaEvento.assinante2Nome,
+        assinante2Titulo: tabelaEvento.assinante2Titulo,
+        assinado: tabelaCertificadoAtividade.assinado,
+        assinadoEm: tabelaCertificadoAtividade.assinadoEm,
+        assinaturaNome: tabelaCertificadoAtividade.assinaturaNome,
+        codigoVerificacao: tabelaCertificadoAtividade.codigoVerificacao,
+      })
+      .from(tabelaCertificadoAtividade)
+      .innerJoin(
+        tabelaAtividade,
+        eq(tabelaCertificadoAtividade.atividadeId, tabelaAtividade.id),
+      )
+      .innerJoin(tabelaEvento, eq(tabelaAtividade.eventoId, tabelaEvento.id))
+      .innerJoin(
+        tabelaUsuario,
+        eq(tabelaCertificadoAtividade.usuarioId, tabelaUsuario.id),
+      )
+      .innerJoin(
+        tabelaParticipacoes,
+        and(
+          eq(
+            tabelaParticipacoes.usuarioId,
+            tabelaCertificadoAtividade.usuarioId,
+          ),
+          eq(tabelaParticipacoes.eventoId, tabelaAtividade.eventoId),
+        ),
+      )
+      .where(eq(tabelaCertificadoAtividade.id, certificateId));
+
+    return row;
+  }
+
+  /**
+   * Diz de fato se o usuario e organizador do evento.
+   *
+   * Existe separado de assertEventOrganizer porque o helper tem um bug
+   * conhecido: o adminCheck e um array (sempre truthy), entao o
+   * ForbiddenException nunca dispara e ele nao bloqueia ninguem.
+   */
+  async isEventOrganizer(userId: number, eventoId: number): Promise<boolean> {
+    const [row] = await db
+      .select({ usuarioId: tabelaParticipacoes.usuarioId })
+      .from(tabelaParticipacoes)
+      .where(
+        and(
+          eq(tabelaParticipacoes.usuarioId, userId),
+          eq(tabelaParticipacoes.eventoId, eventoId),
+          eq(tabelaParticipacoes.tipo, 'organizador'),
+        ),
+      );
+
+    return Boolean(row);
   }
 }
