@@ -116,8 +116,13 @@ porque não há buffers intermediários de renderização.
 | Pico sob carga | 401 MB | 244 MB |
 | Após a carga | 305 MB | 178 MB |
 
-Não vaza — volta a um patamar estável. O cache tem teto de 64 MB em
-`certificate-pdf.service.ts` (`LIMITE_CACHE_BYTES`), ~540 PDFs de 118 KB.
+Não vaza — volta a um patamar estável.
+
+As medições acima foram feitas com o teto do cache em 64 MB. Ele passou a ser
+ajustável por `CERTIFICATE_PDF_CACHE_MB`, com **default de 16 MB** (~135 PDFs de
+118 KB): com isso o pior caso fica em ~420 MB, que cabe num container de 512 MB.
+O ganho do cenário quente praticamente não muda, porque o conjunto de
+certificados ativos num evento real é bem menor que 135. `0` desliga o cache.
 
 ## Assinatura em lote
 
