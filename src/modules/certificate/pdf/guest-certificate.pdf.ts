@@ -51,7 +51,350 @@ function buildDocument(data: GuestCertificateData) {
     GUEST_CERT_TITLE[data.role] ?? 'CERTIFICADO DE PARTICIPAÇÃO';
   const roleVerb = GUEST_ROLE_VERB[data.role] ?? 'participou da atividade';
   const hasTemplate = Boolean(data.templateUrl);
+  const templateSrc = hasTemplate && data.templateUrl ? data.templateUrl : null;
   const renderDefaultBranding = shouldRenderDefaultBranding(data.templateUrl);
+
+  if (hasTemplate && templateSrc) {
+    return e(
+      Document,
+      {},
+      e(
+        Page,
+        { size: 'A4', orientation: 'landscape', style: styles.page },
+        e(Image, {
+          src: templateSrc,
+          style: styles.templateBackground,
+        }),
+        e(
+          View,
+          {
+            style: {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              paddingTop: 42,
+              paddingHorizontal: 48,
+              paddingBottom: 18,
+              justifyContent: 'space-between',
+            },
+          },
+          e(
+            View,
+            { style: { alignItems: 'center', justifyContent: 'center' } },
+            e(
+              Text,
+              {
+                style: {
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: 2,
+                  color: '#0F1D35',
+                  textAlign: 'center',
+                },
+              },
+              certTitle,
+            ),
+            e(
+              Text,
+              {
+                style: {
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: '#0F1D35',
+                  textAlign: 'center',
+                  marginTop: 6,
+                },
+              },
+              data.eventName,
+            ),
+          ),
+          e(
+            View,
+            {
+              style: {
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: 8,
+              },
+            },
+            e(
+              Text,
+              {
+                style: {
+                  fontSize: 12,
+                  fontWeight: 400,
+                  letterSpacing: 2,
+                  color: '#0F1D35',
+                  textTransform: 'uppercase',
+                  marginBottom: 8,
+                },
+              },
+              'Certificamos que',
+            ),
+            e(
+              Text,
+              {
+                style: {
+                  fontSize: 24,
+                  fontWeight: 700,
+                  color: '#0F1D35',
+                  textAlign: 'center',
+                  marginBottom: 10,
+                },
+              },
+              data.guestName,
+            ),
+            e(
+              Text,
+              {
+                style: {
+                  fontSize: 11,
+                  color: '#1F2937',
+                  textAlign: 'center',
+                  lineHeight: 1.7,
+                },
+              },
+              `${roleVerb} `,
+              e(
+                Text,
+                { style: { fontWeight: 700, color: '#0F1D35' } },
+                `"${data.activityName}"`,
+              ),
+              ', parte do evento ',
+              e(
+                Text,
+                { style: { fontWeight: 700, color: '#0F1D35' } },
+                `"${data.eventName}"`,
+              ),
+              data.workloadHours ? ', com carga horária de ' : '.',
+            ),
+            ...(data.workloadHours
+              ? [
+                  e(
+                    Text,
+                    {
+                      style: {
+                        fontSize: 11,
+                        color: '#1F2937',
+                        textAlign: 'center',
+                        marginTop: 4,
+                      },
+                    },
+                    e(
+                      Text,
+                      {
+                        style: {
+                          fontWeight: 700,
+                          color: '#0F1D35',
+                        },
+                      },
+                      `${data.workloadHours} hora(s)`,
+                    ),
+                    '.',
+                  ),
+                ]
+              : []),
+            e(
+              View,
+              {
+                style: {
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  marginTop: 12,
+                  gap: 12,
+                },
+              },
+              e(
+                View,
+                { style: { alignItems: 'center' } },
+                e(
+                  Text,
+                  {
+                    style: {
+                      fontSize: 8,
+                      fontWeight: 700,
+                      letterSpacing: 1.5,
+                      color: '#475467',
+                      textTransform: 'uppercase',
+                    },
+                  },
+                  'Local',
+                ),
+                e(
+                  Text,
+                  {
+                    style: {
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: '#0F1D35',
+                      textAlign: 'center',
+                    },
+                  },
+                  data.location,
+                ),
+              ),
+              e(
+                View,
+                { style: { alignItems: 'center' } },
+                e(
+                  Text,
+                  {
+                    style: {
+                      fontSize: 8,
+                      fontWeight: 700,
+                      letterSpacing: 1.5,
+                      color: '#475467',
+                      textTransform: 'uppercase',
+                    },
+                  },
+                  'Período',
+                ),
+                e(
+                  Text,
+                  {
+                    style: {
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: '#0F1D35',
+                      textAlign: 'center',
+                    },
+                  },
+                  data.eventDate,
+                ),
+              ),
+              ...(data.workloadHours
+                ? [
+                    e(
+                      View,
+                      { style: { alignItems: 'center' } },
+                      e(
+                        Text,
+                        {
+                          style: {
+                            fontSize: 8,
+                            fontWeight: 700,
+                            letterSpacing: 1.5,
+                            color: '#475467',
+                            textTransform: 'uppercase',
+                          },
+                        },
+                        'Carga Horária',
+                      ),
+                      e(
+                        Text,
+                        {
+                          style: {
+                            fontSize: 9,
+                            fontWeight: 700,
+                            color: '#0F1D35',
+                            textAlign: 'center',
+                          },
+                        },
+                        `${data.workloadHours}h`,
+                      ),
+                    ),
+                  ]
+                : []),
+            ),
+          ),
+          e(
+            View,
+            {
+              style: {
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                marginTop: 8,
+              },
+            },
+            data.assinatura
+              ? e(
+                  View,
+                  {
+                    style: {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 10,
+                    },
+                  },
+                  data.assinatura.qr
+                    ? e(Image, {
+                        src: data.assinatura.qr,
+                        style: { width: 56, height: 56, objectFit: 'contain' },
+                      })
+                    : null,
+                  e(
+                    View,
+                    { style: { alignItems: 'center' } },
+                    e(
+                      Text,
+                      { style: { fontSize: 8, color: '#475467' } },
+                      'Assinado digitalmente por',
+                    ),
+                    e(
+                      Text,
+                      {
+                        style: {
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: '#0F1D35',
+                        },
+                      },
+                      data.assinatura.nome,
+                    ),
+                    e(
+                      Text,
+                      { style: { fontSize: 7.5, color: '#475467' } },
+                      `em ${data.assinatura.data}`,
+                    ),
+                    e(
+                      Text,
+                      { style: { fontSize: 7, color: '#64748B' } },
+                      `Código de verificação: ${data.assinatura.codigo}`,
+                    ),
+                  ),
+                )
+              : null,
+          ),
+          e(
+            View,
+            {
+              style: {
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingTop: 8,
+                borderTopWidth: 1,
+                borderTopColor: '#D1D5DB',
+                marginTop: 10,
+                fontSize: 8,
+                color: '#475467',
+              },
+            },
+            e(
+              Text,
+              {
+                style: { flex: 1, textAlign: 'left' },
+              },
+              `Emitido em ${formatDate(data.issueDate)}`,
+            ),
+            e(
+              Text,
+              { style: { flex: 1.4, textAlign: 'center' } },
+              'Universidade Estadual de Feira de Santana — UEFS',
+            ),
+            e(
+              Text,
+              { style: { flex: 1, textAlign: 'right' } },
+              `Certificado nº ${data.certificateId}`,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   return e(
     Document,
@@ -59,13 +402,6 @@ function buildDocument(data: GuestCertificateData) {
     e(
       Page,
       { size: 'A4', orientation: 'landscape', style: styles.page },
-
-      data.templateUrl
-        ? e(Image, {
-            src: data.templateUrl,
-            style: styles.templateBackground,
-          })
-        : null,
 
       e(View, { style: styles.outerBorder }),
       e(View, { style: styles.cornerTL }),
