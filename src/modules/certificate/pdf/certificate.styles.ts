@@ -1,6 +1,6 @@
 import { StyleSheet } from '@react-pdf/renderer';
-import { Font }       from '@react-pdf/renderer';
-import { join }       from 'path';
+import { Font } from '@react-pdf/renderer';
+import { join } from 'path';
 
 /**
  * Relativo a __dirname, não ao cwd: o nest-cli.json copia os .ttf para
@@ -25,13 +25,12 @@ Font.register({
     {
       src: join(FONTS_DIR, 'Poppins-Italic.ttf'),
       fontWeight: 400,
-      fontStyle: 'italic'
+      fontStyle: 'italic',
     },
   ],
 });
 
 export const certificateStyles = StyleSheet.create({
-
   page: {
     position: 'relative',
     padding: 0,
@@ -49,6 +48,174 @@ export const certificateStyles = StyleSheet.create({
     height: '100%',
     objectFit: 'cover',
     zIndex: 0,
+  },
+
+  templateOverlay: {
+    position: 'absolute',
+    top: 244,
+    left: 64,
+    right: 64,
+    height: 170,
+    zIndex: 1,
+    alignItems: 'center',
+  },
+
+  templateCertTypeLabel: {
+    fontSize: 7.5,
+    fontWeight: 700,
+    color: '#24134B',
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+
+  templateEventName: {
+    fontSize: 8.5,
+    fontWeight: 700,
+    color: '#24134B',
+    textAlign: 'center',
+    marginBottom: 14,
+    lineHeight: 1.2,
+  },
+
+  templateCertificamosQue: {
+    fontSize: 7.5,
+    fontWeight: 700,
+    color: '#64748B',
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+
+  templateParticipantName: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: '#0F1D35',
+    textAlign: 'center',
+    marginBottom: 10,
+    lineHeight: 1.15,
+  },
+
+  templateDescriptionText: {
+    fontSize: 7.5,
+    fontWeight: 400,
+    color: '#475467',
+    textAlign: 'center',
+    lineHeight: 1.45,
+    maxWidth: 420,
+  },
+
+  templateDetailsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    marginTop: 10,
+    gap: 14,
+  },
+
+  templateDetailBlock: {
+    alignItems: 'center',
+    minWidth: 54,
+  },
+
+  templateDetailLabel: {
+    fontSize: 5.5,
+    fontWeight: 700,
+    color: '#64748B',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+
+  templateDetailValue: {
+    fontSize: 6,
+    fontWeight: 700,
+    color: '#0F1D35',
+    textAlign: 'center',
+  },
+
+  templateSignatureArea: {
+    position: 'absolute',
+    left: 498,
+    right: 58,
+    bottom: 62,
+    height: 58,
+    zIndex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  templateSignatureStamp: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+
+  templateSignatureQr: {
+    width: 34,
+    height: 34,
+    objectFit: 'contain',
+  },
+
+  templateSignatureInfo: {
+    alignItems: 'center',
+  },
+
+  templateSignatureLabel: {
+    fontSize: 5.5,
+    fontWeight: 400,
+    color: '#64748B',
+  },
+
+  templateSignatureName: {
+    fontSize: 7,
+    fontWeight: 700,
+    color: '#24134B',
+    lineHeight: 1.2,
+  },
+
+  templateSignatureDate: {
+    fontSize: 5.5,
+    fontWeight: 400,
+    color: '#64748B',
+  },
+
+  templateFooterSection: {
+    position: 'absolute',
+    left: 64,
+    right: 64,
+    bottom: 11,
+    zIndex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  templateFooterLeft: {
+    flex: 1,
+    textAlign: 'left',
+    fontSize: 5,
+    fontWeight: 400,
+    color: '#64748B',
+  },
+
+  templateFooterCenter: {
+    flex: 1.5,
+    textAlign: 'center',
+    fontSize: 5,
+    fontWeight: 400,
+    color: '#64748B',
+  },
+
+  templateFooterRight: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 5,
+    fontWeight: 400,
+    color: '#64748B',
   },
 
   // Borda externa com cantos decorativos — linha verde
@@ -127,14 +294,6 @@ export const certificateStyles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-
-  contentWithTemplate: {
-    backgroundColor: 'transparent',
-    borderRadius: 0,
-    paddingHorizontal: 48,
-    paddingTop: 26,
-    paddingBottom: 24,
   },
 
   // Header — logo

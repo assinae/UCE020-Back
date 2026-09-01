@@ -50,9 +50,10 @@ function buildDocument(data: GuestCertificateData) {
   const certTitle =
     GUEST_CERT_TITLE[data.role] ?? 'CERTIFICADO DE PARTICIPAÇÃO';
   const roleVerb = GUEST_ROLE_VERB[data.role] ?? 'participou da atividade';
-  const hasTemplate = Boolean(data.templateUrl);
-  const templateSrc = hasTemplate && data.templateUrl ? data.templateUrl : null;
   const renderDefaultBranding = shouldRenderDefaultBranding(data.templateUrl);
+  const hasTemplate = !renderDefaultBranding;
+  const templateSrc =
+    hasTemplate && data.templateUrl ? data.templateUrl.trim() : null;
 
   if (hasTemplate && templateSrc) {
     return e(
@@ -60,353 +61,152 @@ function buildDocument(data: GuestCertificateData) {
       {},
       e(
         Page,
-        { size: 'A4', orientation: 'landscape', style: styles.page },
+        {
+          size: 'A4',
+          orientation: 'landscape',
+          style: styles.page,
+          wrap: false,
+        },
         e(Image, {
           src: templateSrc,
           style: styles.templateBackground,
         }),
         e(
           View,
-          {
-            style: {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              paddingHorizontal: 56,
-              paddingVertical: 26,
-              justifyContent: 'center',
-              alignItems: 'center',
-            },
-          },
+          { style: styles.templateOverlay },
+          e(Text, { style: styles.templateCertTypeLabel }, certTitle),
+          e(Text, { style: styles.templateEventName }, data.eventName),
           e(
-            View,
-            {
-              style: {
-                width: '100%',
-                alignItems: 'center',
-                justifyContent: 'center',
-              },
-            },
-            e(
-              Text,
-              {
-                style: {
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: 2,
-                  textTransform: 'uppercase',
-                  color: '#0F1D35',
-                  textAlign: 'center',
-                },
-              },
-              certTitle,
-            ),
-            e(
-              Text,
-              {
-                style: {
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: '#0F1D35',
-                  textAlign: 'center',
-                  marginTop: 6,
-                },
-              },
-              data.eventName,
-            ),
+            Text,
+            { style: styles.templateCertificamosQue },
+            'Certificamos que',
           ),
+          e(Text, { style: styles.templateParticipantName }, data.guestName),
           e(
-            View,
-            {
-              style: {
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: 18,
-              },
-            },
+            Text,
+            { style: styles.templateDescriptionText },
+            `${roleVerb} `,
             e(
               Text,
-              {
-                style: {
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: 2,
-                  textTransform: 'uppercase',
-                  color: '#0F1D35',
-                  textAlign: 'center',
-                  marginBottom: 8,
-                },
-              },
-              'Certificamos que',
+              { style: { fontWeight: 700, color: '#0F1D35' } },
+              `"${data.activityName}"`,
             ),
+            ', parte do evento ',
             e(
               Text,
-              {
-                style: {
-                  fontSize: 25,
-                  fontWeight: 700,
-                  color: '#0F1D35',
-                  textAlign: 'center',
-                  marginBottom: 8,
-                },
-              },
-              data.guestName,
+              { style: { fontWeight: 700, color: '#0F1D35' } },
+              `"${data.eventName}"`,
             ),
-            e(
-              Text,
-              {
-                style: {
-                  fontSize: 10,
-                  color: '#334155',
-                  textAlign: 'center',
-                  lineHeight: 1.5,
-                },
-              },
-              `${roleVerb} `,
-              e(
-                Text,
-                { style: { fontWeight: 700, color: '#0F1D35' } },
-                `"${data.activityName}"`,
-              ),
-              ', parte do evento ',
-              e(
-                Text,
-                { style: { fontWeight: 700, color: '#0F1D35' } },
-                `"${data.eventName}"`,
-              ),
-              data.workloadHours ? ', com carga horária de ' : '.',
-            ),
-            ...(data.workloadHours
-              ? [
+            data.workloadHours ? ', com carga horária de ' : '.',
+          ),
+          ...(data.workloadHours
+            ? [
+                e(
+                  Text,
+                  {
+                    style: styles.templateDescriptionText,
+                  },
                   e(
                     Text,
                     {
                       style: {
-                        fontSize: 10,
-                        color: '#334155',
-                        textAlign: 'center',
-                        marginTop: 4,
+                        fontWeight: 700,
+                        color: '#0F1D35',
                       },
                     },
-                    e(
-                      Text,
-                      {
-                        style: {
-                          fontWeight: 700,
-                          color: '#0F1D35',
-                        },
-                      },
-                      `${data.workloadHours} hora(s)`,
-                    ),
-                    '.',
+                    `${data.workloadHours} hora(s)`,
                   ),
-                ]
-              : []),
-          ),
+                  '.',
+                ),
+              ]
+            : []),
           e(
             View,
-            {
-              style: {
-                flexDirection: 'row',
-                justifyContent: 'center',
-                marginTop: 18,
-                gap: 12,
-              },
-            },
+            { style: styles.templateDetailsRow },
             e(
               View,
-              { style: { alignItems: 'center' } },
-              e(
-                Text,
-                {
-                  style: {
-                    fontSize: 7,
-                    fontWeight: 700,
-                    letterSpacing: 1.4,
-                    color: '#475467',
-                    textTransform: 'uppercase',
-                  },
-                },
-                'Local',
-              ),
-              e(
-                Text,
-                {
-                  style: {
-                    fontSize: 8,
-                    fontWeight: 700,
-                    color: '#0F1D35',
-                    textAlign: 'center',
-                  },
-                },
-                data.location,
-              ),
+              { style: styles.templateDetailBlock },
+              e(Text, { style: styles.templateDetailLabel }, 'Local'),
+              e(Text, { style: styles.templateDetailValue }, data.location),
             ),
             e(
               View,
-              { style: { alignItems: 'center' } },
-              e(
-                Text,
-                {
-                  style: {
-                    fontSize: 7,
-                    fontWeight: 700,
-                    letterSpacing: 1.4,
-                    color: '#475467',
-                    textTransform: 'uppercase',
-                  },
-                },
-                'Período',
-              ),
-              e(
-                Text,
-                {
-                  style: {
-                    fontSize: 8,
-                    fontWeight: 700,
-                    color: '#0F1D35',
-                    textAlign: 'center',
-                  },
-                },
-                data.eventDate,
-              ),
+              { style: styles.templateDetailBlock },
+              e(Text, { style: styles.templateDetailLabel }, 'Período'),
+              e(Text, { style: styles.templateDetailValue }, data.eventDate),
             ),
             ...(data.workloadHours
               ? [
                   e(
                     View,
-                    { style: { alignItems: 'center' } },
+                    { style: styles.templateDetailBlock },
                     e(
                       Text,
-                      {
-                        style: {
-                          fontSize: 7,
-                          fontWeight: 700,
-                          letterSpacing: 1.4,
-                          color: '#475467',
-                          textTransform: 'uppercase',
-                        },
-                      },
+                      { style: styles.templateDetailLabel },
                       'Carga Horária',
                     ),
                     e(
                       Text,
-                      {
-                        style: {
-                          fontSize: 8,
-                          fontWeight: 700,
-                          color: '#0F1D35',
-                          textAlign: 'center',
-                        },
-                      },
+                      { style: styles.templateDetailValue },
                       `${data.workloadHours}h`,
                     ),
                   ),
                 ]
               : []),
           ),
-          e(
-            View,
-            {
-              style: {
-                alignItems: 'center',
-                marginTop: 18,
-              },
-            },
-            data.assinatura
-              ? e(
+        ),
+        e(
+          View,
+          { style: styles.templateSignatureArea },
+          data.assinatura
+            ? e(
+                View,
+                { style: styles.templateSignatureStamp },
+                data.assinatura.qr
+                  ? e(Image, {
+                      src: data.assinatura.qr,
+                      style: styles.templateSignatureQr,
+                    })
+                  : null,
+                e(
                   View,
-                  {
-                    style: {
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 10,
-                    },
-                  },
-                  data.assinatura.qr
-                    ? e(Image, {
-                        src: data.assinatura.qr,
-                        style: { width: 40, height: 40, objectFit: 'contain' },
-                      })
-                    : null,
+                  { style: styles.templateSignatureInfo },
                   e(
-                    View,
-                    { style: { alignItems: 'center' } },
-                    e(
-                      Text,
-                      { style: { fontSize: 7, color: '#475467' } },
-                      'Assinado digitalmente por',
-                    ),
-                    e(
-                      Text,
-                      {
-                        style: {
-                          fontSize: 9,
-                          fontWeight: 700,
-                          color: '#0F1D35',
-                        },
-                      },
-                      data.assinatura.nome,
-                    ),
-                    e(
-                      Text,
-                      { style: { fontSize: 7, color: '#475467' } },
-                      `em ${data.assinatura.data}`,
-                    ),
+                    Text,
+                    { style: styles.templateSignatureLabel },
+                    'Assinado digitalmente por',
                   ),
-                )
-              : null,
+                  e(
+                    Text,
+                    { style: styles.templateSignatureName },
+                    data.assinatura.nome,
+                  ),
+                  e(
+                    Text,
+                    { style: styles.templateSignatureDate },
+                    `em ${data.assinatura.data}`,
+                  ),
+                ),
+              )
+            : null,
+        ),
+        e(
+          View,
+          { style: styles.templateFooterSection },
+          e(
+            Text,
+            { style: styles.templateFooterLeft },
+            `Emitido em ${formatDate(data.issueDate)}`,
           ),
           e(
-            View,
-            {
-              style: {
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginTop: 18,
-                width: '100%',
-              },
-            },
-            e(
-              Text,
-              {
-                style: {
-                  flex: 1,
-                  textAlign: 'left',
-                  fontSize: 7,
-                  color: '#475467',
-                },
-              },
-              `Emitido em ${formatDate(data.issueDate)}`,
-            ),
-            e(
-              Text,
-              {
-                style: {
-                  flex: 1.5,
-                  textAlign: 'center',
-                  fontSize: 7,
-                  color: '#475467',
-                },
-              },
-              'Universidade Estadual de Feira de Santana — UEFS',
-            ),
-            e(
-              Text,
-              {
-                style: {
-                  flex: 1,
-                  textAlign: 'right',
-                  fontSize: 7,
-                  color: '#475467',
-                },
-              },
-              `Certificado nº ${data.certificateId}`,
-            ),
+            Text,
+            { style: styles.templateFooterCenter },
+            'Universidade Estadual de Feira de Santana — UEFS',
+          ),
+          e(
+            Text,
+            { style: styles.templateFooterRight },
+            `Certificado nº ${data.certificateId}`,
           ),
         ),
       ),
@@ -429,9 +229,7 @@ function buildDocument(data: GuestCertificateData) {
       e(
         View,
         {
-          style: hasTemplate
-            ? { ...styles.content, ...styles.contentWithTemplate }
-            : styles.content,
+          style: styles.content,
         },
 
         // Logo
