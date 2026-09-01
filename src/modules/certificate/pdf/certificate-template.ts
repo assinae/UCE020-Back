@@ -30,3 +30,9 @@ export function resolveCertificateTemplateUrl(
   const valid = candidates.find(isValidTemplateCandidate);
   return valid ? valid.trim() : null;
 }
+
+export function shouldRenderDefaultBranding(
+  templateUrl?: string | null,
+): boolean {
+  return !isValidTemplateCandidate(templateUrl);
+}

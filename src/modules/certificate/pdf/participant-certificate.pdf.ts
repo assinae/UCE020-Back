@@ -7,6 +7,7 @@ import {
   LOGO_ASSINAE_SRC,
   LOGO_UEFS_SRC,
 } from 'src/resources/certificatesConfig/certificate.assets';
+import { shouldRenderDefaultBranding } from './certificate-template';
 
 export type ParticipantCertificateData = {
   certificateId: number;
@@ -62,6 +63,7 @@ function buildDocument(data: ParticipantCertificateData) {
   const certTitle = ROLE_CERT_TITLE[data.role] ?? 'CERTIFICADO DE PARTICIPAÇÃO';
   const roleVerb = buildRoleVerb(data.role, data.contextLabel ?? 'evento');
   const hasTemplate = Boolean(data.templateUrl);
+  const renderDefaultBranding = shouldRenderDefaultBranding(data.templateUrl);
 
   return e(
     Document,
@@ -95,11 +97,13 @@ function buildDocument(data: ParticipantCertificateData) {
         },
 
         // Logo
-        e(
-          View,
-          { style: styles.headerSection },
-          e(Image, { src: LOGO_ASSINAE_SRC, style: styles.logo }),
-        ),
+        renderDefaultBranding
+          ? e(
+              View,
+              { style: styles.headerSection },
+              e(Image, { src: LOGO_ASSINAE_SRC, style: styles.logo }),
+            )
+          : null,
 
         // Tipo + nome do evento
         e(
@@ -220,12 +224,14 @@ function buildDocument(data: ParticipantCertificateData) {
         ),
 
         // Apoio (fixa) — logo UEFS
-        e(
-          View,
-          { style: styles.apoioSection },
-          e(Text, { style: styles.apoioLabel }, 'Apoio:'),
-          e(Image, { src: LOGO_UEFS_SRC, style: styles.apoioLogo }),
-        ),
+        renderDefaultBranding
+          ? e(
+              View,
+              { style: styles.apoioSection },
+              e(Text, { style: styles.apoioLabel }, 'Apoio:'),
+              e(Image, { src: LOGO_UEFS_SRC, style: styles.apoioLogo }),
+            )
+          : null,
 
         // Rodapé (Atualizado com as novas classes de simetria)
         e(
