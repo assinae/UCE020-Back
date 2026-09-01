@@ -75,6 +75,9 @@ export const tabelaEvento = pgTable('evento', {
   dataFim: timestamp('dataFim', { withTimezone: true }).notNull(),
   status: statusEnum('status').notNull(),
   foto: text('foto'), //url
+  templateUrl: text('template_url'),
+  certificadoTemplate: text('certificado_template'),
+  template: text('template'),
   assinante1Nome: text('assinante1_nome'),
   assinante1Titulo: text('assinante1_titulo'),
   assinante2Nome: text('assinante2_nome'),

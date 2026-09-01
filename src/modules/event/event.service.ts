@@ -106,6 +106,9 @@ export class EventService {
           dataFim: parseEventDate(createEventDto.dataFim),
           status: createEventDto.status,
           foto: createEventDto.foto,
+          templateUrl: createEventDto.templateUrl ?? null,
+          certificadoTemplate: createEventDto.certificadoTemplate ?? null,
+          template: createEventDto.template ?? null,
         })
         .returning();
 
@@ -322,6 +325,15 @@ export class EventService {
         }),
         ...(dataFim !== undefined && {
           dataFim: parseEventDate(dataFim),
+        }),
+        ...(updateEventDto.templateUrl !== undefined && {
+          templateUrl: updateEventDto.templateUrl ?? null,
+        }),
+        ...(updateEventDto.certificadoTemplate !== undefined && {
+          certificadoTemplate: updateEventDto.certificadoTemplate ?? null,
+        }),
+        ...(updateEventDto.template !== undefined && {
+          template: updateEventDto.template ?? null,
         }),
       })
       .where(eq(tabelaEvento.id, id))

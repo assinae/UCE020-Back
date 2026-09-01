@@ -38,6 +38,17 @@ export const certificateStyles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
 
+  templateBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+
   // Borda externa com cantos decorativos — linha verde
   outerBorder: {
     position: 'absolute',
@@ -109,6 +120,14 @@ export const certificateStyles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+
+  contentWithTemplate: {
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    borderRadius: 18,
+    paddingHorizontal: 48,
+    paddingTop: 26,
+    paddingBottom: 24,
   },
 
   // Header — logo

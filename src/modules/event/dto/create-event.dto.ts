@@ -44,6 +44,18 @@ export class CreateEventDto {
   @IsOptional()
   foto?: string;
 
+  @IsString()
+  @IsOptional()
+  templateUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  certificadoTemplate?: string;
+
+  @IsString()
+  @IsOptional()
+  template?: string;
+
   @Type(() => Array)
   @IsOptional()
   atividades?: CreateActivityDto[];

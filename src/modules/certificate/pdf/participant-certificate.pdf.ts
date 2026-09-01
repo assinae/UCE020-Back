@@ -24,6 +24,7 @@ export type ParticipantCertificateData = {
   assinante1Titulo?: string;
   assinante2Nome?: string;
   assinante2Titulo?: string;
+  templateUrl?: string | null;
   // Dados da assinatura digital (preenchidos no ato da assinatura).
   assinatura?: {
     nome: string;
@@ -60,6 +61,7 @@ function buildDocument(data: ParticipantCertificateData) {
   const e = React.createElement;
   const certTitle = ROLE_CERT_TITLE[data.role] ?? 'CERTIFICADO DE PARTICIPAÇÃO';
   const roleVerb = buildRoleVerb(data.role, data.contextLabel ?? 'evento');
+  const hasTemplate = Boolean(data.templateUrl);
 
   return e(
     Document,
@@ -77,9 +79,20 @@ function buildDocument(data: ParticipantCertificateData) {
       e(View, { style: styles.cornerBL }),
       e(View, { style: styles.cornerBR }),
 
+      data.templateUrl
+        ? e(Image, {
+            src: data.templateUrl,
+            style: styles.templateBackground,
+          })
+        : null,
+
       e(
         View,
-        { style: styles.content },
+        {
+          style: hasTemplate
+            ? { ...styles.content, ...styles.contentWithTemplate }
+            : styles.content,
+        },
 
         // Logo
         e(

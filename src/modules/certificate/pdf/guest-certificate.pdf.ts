@@ -22,6 +22,7 @@ export type GuestCertificateData = {
   assinante1Titulo?: string;
   assinante2Nome?: string;
   assinante2Titulo?: string;
+  templateUrl?: string | null;
   // Dados da assinatura digital (preenchidos no ato da assinatura).
   assinatura?: {
     nome: string;
@@ -48,6 +49,7 @@ function buildDocument(data: GuestCertificateData) {
   const certTitle =
     GUEST_CERT_TITLE[data.role] ?? 'CERTIFICADO DE PARTICIPAÇÃO';
   const roleVerb = GUEST_ROLE_VERB[data.role] ?? 'participou da atividade';
+  const hasTemplate = Boolean(data.templateUrl);
 
   return e(
     Document,
@@ -62,9 +64,20 @@ function buildDocument(data: GuestCertificateData) {
       e(View, { style: styles.cornerBL }),
       e(View, { style: styles.cornerBR }),
 
+      data.templateUrl
+        ? e(Image, {
+            src: data.templateUrl,
+            style: styles.templateBackground,
+          })
+        : null,
+
       e(
         View,
-        { style: styles.content },
+        {
+          style: hasTemplate
+            ? { ...styles.content, ...styles.contentWithTemplate }
+            : styles.content,
+        },
 
         // Logo
         e(

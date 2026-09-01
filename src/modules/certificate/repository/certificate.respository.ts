@@ -96,6 +96,9 @@ export interface EventoCertParaRender {
   assinante1Titulo: string | null;
   assinante2Nome: string | null;
   assinante2Titulo: string | null;
+  templateUrl: string | null;
+  certificadoTemplate: string | null;
+  template: string | null;
   assinado: boolean;
   assinadoEm: Date | null;
   assinaturaNome: string | null;
@@ -118,6 +121,9 @@ export interface ConvidadoCertParaRender {
   assinante1Titulo: string | null;
   assinante2Nome: string | null;
   assinante2Titulo: string | null;
+  templateUrl: string | null;
+  certificadoTemplate: string | null;
+  template: string | null;
   assinado: boolean;
   assinadoEm: Date | null;
   assinaturaNome: string | null;
@@ -142,6 +148,9 @@ export interface AtividadeCertParaRender {
   assinante1Titulo: string | null;
   assinante2Nome: string | null;
   assinante2Titulo: string | null;
+  templateUrl: string | null;
+  certificadoTemplate: string | null;
+  template: string | null;
   assinado: boolean;
   assinadoEm: Date | null;
   assinaturaNome: string | null;
@@ -874,6 +883,9 @@ export class CertificateRepository {
         assinante1Titulo: tabelaEvento.assinante1Titulo,
         assinante2Nome: tabelaEvento.assinante2Nome,
         assinante2Titulo: tabelaEvento.assinante2Titulo,
+        templateUrl: tabelaEvento.templateUrl,
+        certificadoTemplate: tabelaEvento.certificadoTemplate,
+        template: tabelaEvento.template,
         assinado: tabelaCertificadoEvento.assinado,
         assinadoEm: tabelaCertificadoEvento.assinadoEm,
         assinaturaNome: tabelaCertificadoEvento.assinaturaNome,
@@ -920,6 +932,9 @@ export class CertificateRepository {
         assinante1Titulo: tabelaEvento.assinante1Titulo,
         assinante2Nome: tabelaEvento.assinante2Nome,
         assinante2Titulo: tabelaEvento.assinante2Titulo,
+        templateUrl: tabelaEvento.templateUrl,
+        certificadoTemplate: tabelaEvento.certificadoTemplate,
+        template: tabelaEvento.template,
         assinado: tabelaCertificadoConvidado.assinado,
         assinadoEm: tabelaCertificadoConvidado.assinadoEm,
         assinaturaNome: tabelaCertificadoConvidado.assinaturaNome,
@@ -974,6 +989,9 @@ export class CertificateRepository {
         assinante1Titulo: tabelaEvento.assinante1Titulo,
         assinante2Nome: tabelaEvento.assinante2Nome,
         assinante2Titulo: tabelaEvento.assinante2Titulo,
+        templateUrl: tabelaEvento.templateUrl,
+        certificadoTemplate: tabelaEvento.certificadoTemplate,
+        template: tabelaEvento.template,
         assinado: tabelaCertificadoAtividade.assinado,
         assinadoEm: tabelaCertificadoAtividade.assinadoEm,
         assinaturaNome: tabelaCertificadoAtividade.assinaturaNome,
