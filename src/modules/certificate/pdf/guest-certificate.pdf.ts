@@ -74,22 +74,29 @@ function buildDocument(data: GuestCertificateData) {
               left: 0,
               right: 0,
               bottom: 0,
-              paddingTop: 42,
-              paddingHorizontal: 48,
-              paddingBottom: 18,
-              justifyContent: 'space-between',
+              paddingHorizontal: 56,
+              paddingVertical: 26,
+              justifyContent: 'center',
+              alignItems: 'center',
             },
           },
           e(
             View,
-            { style: { alignItems: 'center', justifyContent: 'center' } },
+            {
+              style: {
+                width: '100%',
+                alignItems: 'center',
+                justifyContent: 'center',
+              },
+            },
             e(
               Text,
               {
                 style: {
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: 700,
                   letterSpacing: 2,
+                  textTransform: 'uppercase',
                   color: '#0F1D35',
                   textAlign: 'center',
                 },
@@ -100,7 +107,7 @@ function buildDocument(data: GuestCertificateData) {
               Text,
               {
                 style: {
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: 700,
                   color: '#0F1D35',
                   textAlign: 'center',
@@ -116,18 +123,19 @@ function buildDocument(data: GuestCertificateData) {
               style: {
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginTop: 8,
+                marginTop: 18,
               },
             },
             e(
               Text,
               {
                 style: {
-                  fontSize: 12,
-                  fontWeight: 400,
+                  fontSize: 11,
+                  fontWeight: 700,
                   letterSpacing: 2,
-                  color: '#0F1D35',
                   textTransform: 'uppercase',
+                  color: '#0F1D35',
+                  textAlign: 'center',
                   marginBottom: 8,
                 },
               },
@@ -137,11 +145,11 @@ function buildDocument(data: GuestCertificateData) {
               Text,
               {
                 style: {
-                  fontSize: 24,
+                  fontSize: 25,
                   fontWeight: 700,
                   color: '#0F1D35',
                   textAlign: 'center',
-                  marginBottom: 10,
+                  marginBottom: 8,
                 },
               },
               data.guestName,
@@ -150,10 +158,10 @@ function buildDocument(data: GuestCertificateData) {
               Text,
               {
                 style: {
-                  fontSize: 11,
-                  color: '#1F2937',
+                  fontSize: 10,
+                  color: '#334155',
                   textAlign: 'center',
-                  lineHeight: 1.7,
+                  lineHeight: 1.5,
                 },
               },
               `${roleVerb} `,
@@ -176,8 +184,8 @@ function buildDocument(data: GuestCertificateData) {
                     Text,
                     {
                       style: {
-                        fontSize: 11,
-                        color: '#1F2937',
+                        fontSize: 10,
+                        color: '#334155',
                         textAlign: 'center',
                         marginTop: 4,
                       },
@@ -196,116 +204,115 @@ function buildDocument(data: GuestCertificateData) {
                   ),
                 ]
               : []),
+          ),
+          e(
+            View,
+            {
+              style: {
+                flexDirection: 'row',
+                justifyContent: 'center',
+                marginTop: 18,
+                gap: 12,
+              },
+            },
             e(
               View,
-              {
-                style: {
-                  flexDirection: 'row',
-                  justifyContent: 'center',
-                  marginTop: 12,
-                  gap: 12,
+              { style: { alignItems: 'center' } },
+              e(
+                Text,
+                {
+                  style: {
+                    fontSize: 7,
+                    fontWeight: 700,
+                    letterSpacing: 1.4,
+                    color: '#475467',
+                    textTransform: 'uppercase',
+                  },
                 },
-              },
-              e(
-                View,
-                { style: { alignItems: 'center' } },
-                e(
-                  Text,
-                  {
-                    style: {
-                      fontSize: 8,
-                      fontWeight: 700,
-                      letterSpacing: 1.5,
-                      color: '#475467',
-                      textTransform: 'uppercase',
-                    },
-                  },
-                  'Local',
-                ),
-                e(
-                  Text,
-                  {
-                    style: {
-                      fontSize: 9,
-                      fontWeight: 700,
-                      color: '#0F1D35',
-                      textAlign: 'center',
-                    },
-                  },
-                  data.location,
-                ),
+                'Local',
               ),
               e(
-                View,
-                { style: { alignItems: 'center' } },
-                e(
-                  Text,
-                  {
-                    style: {
-                      fontSize: 8,
-                      fontWeight: 700,
-                      letterSpacing: 1.5,
-                      color: '#475467',
-                      textTransform: 'uppercase',
-                    },
+                Text,
+                {
+                  style: {
+                    fontSize: 8,
+                    fontWeight: 700,
+                    color: '#0F1D35',
+                    textAlign: 'center',
                   },
-                  'Período',
-                ),
-                e(
-                  Text,
-                  {
-                    style: {
-                      fontSize: 9,
-                      fontWeight: 700,
-                      color: '#0F1D35',
-                      textAlign: 'center',
-                    },
-                  },
-                  data.eventDate,
-                ),
+                },
+                data.location,
               ),
-              ...(data.workloadHours
-                ? [
-                    e(
-                      View,
-                      { style: { alignItems: 'center' } },
-                      e(
-                        Text,
-                        {
-                          style: {
-                            fontSize: 8,
-                            fontWeight: 700,
-                            letterSpacing: 1.5,
-                            color: '#475467',
-                            textTransform: 'uppercase',
-                          },
-                        },
-                        'Carga Horária',
-                      ),
-                      e(
-                        Text,
-                        {
-                          style: {
-                            fontSize: 9,
-                            fontWeight: 700,
-                            color: '#0F1D35',
-                            textAlign: 'center',
-                          },
-                        },
-                        `${data.workloadHours}h`,
-                      ),
-                    ),
-                  ]
-                : []),
             ),
+            e(
+              View,
+              { style: { alignItems: 'center' } },
+              e(
+                Text,
+                {
+                  style: {
+                    fontSize: 7,
+                    fontWeight: 700,
+                    letterSpacing: 1.4,
+                    color: '#475467',
+                    textTransform: 'uppercase',
+                  },
+                },
+                'Período',
+              ),
+              e(
+                Text,
+                {
+                  style: {
+                    fontSize: 8,
+                    fontWeight: 700,
+                    color: '#0F1D35',
+                    textAlign: 'center',
+                  },
+                },
+                data.eventDate,
+              ),
+            ),
+            ...(data.workloadHours
+              ? [
+                  e(
+                    View,
+                    { style: { alignItems: 'center' } },
+                    e(
+                      Text,
+                      {
+                        style: {
+                          fontSize: 7,
+                          fontWeight: 700,
+                          letterSpacing: 1.4,
+                          color: '#475467',
+                          textTransform: 'uppercase',
+                        },
+                      },
+                      'Carga Horária',
+                    ),
+                    e(
+                      Text,
+                      {
+                        style: {
+                          fontSize: 8,
+                          fontWeight: 700,
+                          color: '#0F1D35',
+                          textAlign: 'center',
+                        },
+                      },
+                      `${data.workloadHours}h`,
+                    ),
+                  ),
+                ]
+              : []),
           ),
           e(
             View,
             {
               style: {
                 alignItems: 'center',
-                justifyContent: 'flex-end',
-                marginTop: 8,
+                marginTop: 18,
               },
             },
             data.assinatura
@@ -322,7 +329,7 @@ function buildDocument(data: GuestCertificateData) {
                   data.assinatura.qr
                     ? e(Image, {
                         src: data.assinatura.qr,
-                        style: { width: 56, height: 56, objectFit: 'contain' },
+                        style: { width: 40, height: 40, objectFit: 'contain' },
                       })
                     : null,
                   e(
@@ -330,14 +337,14 @@ function buildDocument(data: GuestCertificateData) {
                     { style: { alignItems: 'center' } },
                     e(
                       Text,
-                      { style: { fontSize: 8, color: '#475467' } },
+                      { style: { fontSize: 7, color: '#475467' } },
                       'Assinado digitalmente por',
                     ),
                     e(
                       Text,
                       {
                         style: {
-                          fontSize: 10,
+                          fontSize: 9,
                           fontWeight: 700,
                           color: '#0F1D35',
                         },
@@ -346,13 +353,8 @@ function buildDocument(data: GuestCertificateData) {
                     ),
                     e(
                       Text,
-                      { style: { fontSize: 7.5, color: '#475467' } },
+                      { style: { fontSize: 7, color: '#475467' } },
                       `em ${data.assinatura.data}`,
-                    ),
-                    e(
-                      Text,
-                      { style: { fontSize: 7, color: '#64748B' } },
-                      `Código de verificação: ${data.assinatura.codigo}`,
                     ),
                   ),
                 )
@@ -365,29 +367,44 @@ function buildDocument(data: GuestCertificateData) {
                 flexDirection: 'row',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                paddingTop: 8,
-                borderTopWidth: 1,
-                borderTopColor: '#D1D5DB',
-                marginTop: 10,
-                fontSize: 8,
-                color: '#475467',
+                marginTop: 18,
+                width: '100%',
               },
             },
             e(
               Text,
               {
-                style: { flex: 1, textAlign: 'left' },
+                style: {
+                  flex: 1,
+                  textAlign: 'left',
+                  fontSize: 7,
+                  color: '#475467',
+                },
               },
               `Emitido em ${formatDate(data.issueDate)}`,
             ),
             e(
               Text,
-              { style: { flex: 1.4, textAlign: 'center' } },
+              {
+                style: {
+                  flex: 1.5,
+                  textAlign: 'center',
+                  fontSize: 7,
+                  color: '#475467',
+                },
+              },
               'Universidade Estadual de Feira de Santana — UEFS',
             ),
             e(
               Text,
-              { style: { flex: 1, textAlign: 'right' } },
+              {
+                style: {
+                  flex: 1,
+                  textAlign: 'right',
+                  fontSize: 7,
+                  color: '#475467',
+                },
+              },
               `Certificado nº ${data.certificateId}`,
             ),
           ),
