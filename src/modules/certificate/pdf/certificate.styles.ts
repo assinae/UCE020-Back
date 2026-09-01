@@ -49,21 +49,21 @@ export const certificateStyles = StyleSheet.create({
 
   templateContent: {
     position: 'absolute',
-    top: 255,
+    top: 250,
     left: 64,
     right: 64,
-    height: 210,
+    height: 250,
     alignItems: 'center',
   },
 
   templateCertTypeLabel: {
-    fontSize: 7.5,
+    fontSize: 9,
     fontWeight: 700,
     color: '#24134B',
     letterSpacing: 1.6,
     textTransform: 'uppercase',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
 
   templateBodySection: {
@@ -72,57 +72,57 @@ export const certificateStyles = StyleSheet.create({
   },
 
   templateEventName: {
-    fontSize: 8.5,
+    fontSize: 11,
     fontWeight: 700,
     color: '#24134B',
     textAlign: 'center',
-    marginBottom: 14,
+    marginBottom: 18,
     lineHeight: 1.2,
   },
 
   templateCertificamosQue: {
-    fontSize: 7.5,
+    fontSize: 9,
     fontWeight: 700,
     color: '#64748B',
     letterSpacing: 1.8,
     textTransform: 'uppercase',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
 
   templateParticipantName: {
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: 700,
     color: '#0F1D35',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
     lineHeight: 1.15,
   },
 
   templateDescriptionText: {
-    fontSize: 7.5,
+    fontSize: 9,
     fontWeight: 400,
     color: '#475467',
     textAlign: 'center',
     lineHeight: 1.45,
-    maxWidth: 420,
+    maxWidth: 520,
   },
 
   templateDetailsRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'center',
-    marginTop: 10,
-    gap: 14,
+    marginTop: 14,
+    gap: 20,
   },
 
   templateDetailBlock: {
     alignItems: 'center',
-    minWidth: 54,
+    minWidth: 70,
   },
 
   templateDetailLabel: {
-    fontSize: 5.5,
+    fontSize: 7,
     fontWeight: 700,
     color: '#64748B',
     letterSpacing: 1,
@@ -131,7 +131,7 @@ export const certificateStyles = StyleSheet.create({
   },
 
   templateDetailValue: {
-    fontSize: 6,
+    fontSize: 8,
     fontWeight: 700,
     color: '#0F1D35',
     textAlign: 'center',
@@ -139,48 +139,12 @@ export const certificateStyles = StyleSheet.create({
 
   templateSignatureArea: {
     position: 'absolute',
-    left: 64,
-    right: 64,
-    bottom: 72,
-    height: 54,
-    alignItems: 'center',
+    left: 250,
+    bottom: 66,
+    width: 280,
+    height: 96,
+    alignItems: 'flex-start',
     justifyContent: 'center',
-  },
-
-  templateSignatureStamp: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-
-  templateSignatureQr: {
-    width: 34,
-    height: 34,
-    objectFit: 'contain',
-  },
-
-  templateSignatureInfo: {
-    alignItems: 'center',
-  },
-
-  templateSignatureLabel: {
-    fontSize: 5.5,
-    fontWeight: 400,
-    color: '#64748B',
-  },
-
-  templateSignatureName: {
-    fontSize: 7,
-    fontWeight: 700,
-    color: '#24134B',
-    lineHeight: 1.2,
-  },
-
-  templateSignatureDate: {
-    fontSize: 5.5,
-    fontWeight: 400,
-    color: '#64748B',
   },
 
   templateFooterSection: {

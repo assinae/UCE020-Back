@@ -164,30 +164,39 @@ function buildDocument(data: GuestCertificateData) {
           data.assinatura
             ? e(
                 View,
-                { style: styles.templateSignatureStamp },
+                { style: styles.signatureStamp },
                 data.assinatura.qr
                   ? e(Image, {
                       src: data.assinatura.qr,
-                      style: styles.templateSignatureQr,
+                      style: styles.signatureQr,
                     })
                   : null,
                 e(
                   View,
-                  { style: styles.templateSignatureInfo },
+                  { style: styles.signatureInfo },
+                  e(Image, {
+                    src: LOGO_ASSINAE_SRC,
+                    style: styles.signatureLogo,
+                  }),
                   e(
                     Text,
-                    { style: styles.templateSignatureLabel },
+                    { style: styles.signatureLabel },
                     'Assinado digitalmente por',
                   ),
                   e(
                     Text,
-                    { style: styles.templateSignatureName },
+                    { style: styles.signatureName },
                     data.assinatura.nome,
                   ),
                   e(
                     Text,
-                    { style: styles.templateSignatureDate },
+                    { style: styles.signatureDate },
                     `em ${data.assinatura.data}`,
+                  ),
+                  e(
+                    Text,
+                    { style: styles.signatureCode },
+                    `Código de verificação: ${data.assinatura.codigo}`,
                   ),
                 ),
               )
