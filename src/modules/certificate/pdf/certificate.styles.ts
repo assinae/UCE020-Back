@@ -139,10 +139,10 @@ export const certificateStyles = StyleSheet.create({
 
   templateSignatureArea: {
     position: 'absolute',
-    left: 260,
-    bottom: 66,
-    width: 280,
-    height: 96,
+    left: 270,
+    bottom: 50,
+    width: 250,
+    height: 90,
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
