@@ -65,7 +65,6 @@ function buildDocument(data: GuestCertificateData) {
           size: 'A4',
           orientation: 'landscape',
           style: styles.page,
-          wrap: false,
         },
         e(Image, {
           src: templateSrc,
@@ -73,86 +72,90 @@ function buildDocument(data: GuestCertificateData) {
         }),
         e(
           View,
-          { style: styles.templateOverlay },
-          e(Text, { style: styles.templateCertTypeLabel }, certTitle),
-          e(Text, { style: styles.templateEventName }, data.eventName),
-          e(
-            Text,
-            { style: styles.templateCertificamosQue },
-            'Certificamos que',
-          ),
-          e(Text, { style: styles.templateParticipantName }, data.guestName),
-          e(
-            Text,
-            { style: styles.templateDescriptionText },
-            `${roleVerb} `,
-            e(
-              Text,
-              { style: { fontWeight: 700, color: '#0F1D35' } },
-              `"${data.activityName}"`,
-            ),
-            ', parte do evento ',
-            e(
-              Text,
-              { style: { fontWeight: 700, color: '#0F1D35' } },
-              `"${data.eventName}"`,
-            ),
-            data.workloadHours ? ', com carga horária de ' : '.',
-          ),
-          ...(data.workloadHours
-            ? [
-                e(
-                  Text,
-                  {
-                    style: styles.templateDescriptionText,
-                  },
-                  e(
-                    Text,
-                    {
-                      style: {
-                        fontWeight: 700,
-                        color: '#0F1D35',
-                      },
-                    },
-                    `${data.workloadHours} hora(s)`,
-                  ),
-                  '.',
-                ),
-              ]
-            : []),
+          { style: styles.templateContent },
           e(
             View,
-            { style: styles.templateDetailsRow },
+            { style: styles.templateBodySection },
+            e(Text, { style: styles.templateCertTypeLabel }, certTitle),
+            e(Text, { style: styles.templateEventName }, data.eventName),
             e(
-              View,
-              { style: styles.templateDetailBlock },
-              e(Text, { style: styles.templateDetailLabel }, 'Local'),
-              e(Text, { style: styles.templateDetailValue }, data.location),
+              Text,
+              { style: styles.templateCertificamosQue },
+              'Certificamos que',
             ),
+            e(Text, { style: styles.templateParticipantName }, data.guestName),
             e(
-              View,
-              { style: styles.templateDetailBlock },
-              e(Text, { style: styles.templateDetailLabel }, 'Período'),
-              e(Text, { style: styles.templateDetailValue }, data.eventDate),
+              Text,
+              { style: styles.templateDescriptionText },
+              `${roleVerb} `,
+              e(
+                Text,
+                { style: { fontWeight: 700, color: '#0F1D35' } },
+                `"${data.activityName}"`,
+              ),
+              ', parte do evento ',
+              e(
+                Text,
+                { style: { fontWeight: 700, color: '#0F1D35' } },
+                `"${data.eventName}"`,
+              ),
+              data.workloadHours ? ', com carga horária de ' : '.',
             ),
             ...(data.workloadHours
               ? [
                   e(
-                    View,
-                    { style: styles.templateDetailBlock },
+                    Text,
+                    {
+                      style: styles.templateDescriptionText,
+                    },
                     e(
                       Text,
-                      { style: styles.templateDetailLabel },
-                      'Carga Horária',
+                      {
+                        style: {
+                          fontWeight: 700,
+                          color: '#0F1D35',
+                        },
+                      },
+                      `${data.workloadHours} hora(s)`,
                     ),
-                    e(
-                      Text,
-                      { style: styles.templateDetailValue },
-                      `${data.workloadHours}h`,
-                    ),
+                    '.',
                   ),
                 ]
               : []),
+            e(
+              View,
+              { style: styles.templateDetailsRow },
+              e(
+                View,
+                { style: styles.templateDetailBlock },
+                e(Text, { style: styles.templateDetailLabel }, 'Local'),
+                e(Text, { style: styles.templateDetailValue }, data.location),
+              ),
+              e(
+                View,
+                { style: styles.templateDetailBlock },
+                e(Text, { style: styles.templateDetailLabel }, 'Período'),
+                e(Text, { style: styles.templateDetailValue }, data.eventDate),
+              ),
+              ...(data.workloadHours
+                ? [
+                    e(
+                      View,
+                      { style: styles.templateDetailBlock },
+                      e(
+                        Text,
+                        { style: styles.templateDetailLabel },
+                        'Carga Horária',
+                      ),
+                      e(
+                        Text,
+                        { style: styles.templateDetailValue },
+                        `${data.workloadHours}h`,
+                      ),
+                    ),
+                  ]
+                : []),
+            ),
           ),
         ),
         e(

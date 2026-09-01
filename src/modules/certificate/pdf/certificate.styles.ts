@@ -42,21 +42,17 @@ export const certificateStyles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
+    width: 841.89,
+    height: 595,
     objectFit: 'cover',
-    zIndex: 0,
   },
 
-  templateOverlay: {
+  templateContent: {
     position: 'absolute',
-    top: 244,
+    top: 255,
     left: 64,
     right: 64,
-    height: 170,
-    zIndex: 1,
+    height: 210,
     alignItems: 'center',
   },
 
@@ -68,6 +64,11 @@ export const certificateStyles = StyleSheet.create({
     textTransform: 'uppercase',
     textAlign: 'center',
     marginBottom: 8,
+  },
+
+  templateBodySection: {
+    alignItems: 'center',
+    width: '100%',
   },
 
   templateEventName: {
@@ -138,11 +139,10 @@ export const certificateStyles = StyleSheet.create({
 
   templateSignatureArea: {
     position: 'absolute',
-    left: 498,
-    right: 58,
-    bottom: 62,
-    height: 58,
-    zIndex: 1,
+    left: 64,
+    right: 64,
+    bottom: 72,
+    height: 54,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -187,8 +187,7 @@ export const certificateStyles = StyleSheet.create({
     position: 'absolute',
     left: 64,
     right: 64,
-    bottom: 11,
-    zIndex: 1,
+    bottom: 13,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
