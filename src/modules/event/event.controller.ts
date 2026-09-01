@@ -10,10 +10,10 @@ import {
   UnauthorizedException,
   Query,
   BadRequestException,
-  UploadedFile,
+  UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -50,7 +50,12 @@ export class EventController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('foto'), FileInterceptor('template'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'foto', maxCount: 1 },
+      { name: 'template', maxCount: 1 },
+    ]),
+  )
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateEventDto })
@@ -63,12 +68,18 @@ export class EventController {
   })
   async create(
     @Body() createEventDto: CreateEventDto,
-    @UploadedFile('foto') file: Express.Multer.File,
-    @UploadedFile('template') templateFile: Express.Multer.File,
+    @UploadedFiles()
+    files: {
+      foto?: Express.Multer.File[];
+      template?: Express.Multer.File[];
+    },
     @User() user: JwtPayload,
   ) {
     const userId = Number(user.sub);
     await this.eventService.assertAuthenticatedUserExists(userId);
+
+    const file = files?.foto?.[0];
+    const templateFile = files?.template?.[0];
 
     let uploadedPhotoUrl: string | undefined;
     let uploadedTemplateUrl: string | undefined;
@@ -187,7 +198,12 @@ export class EventController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('foto'), FileInterceptor('template'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'foto', maxCount: 1 },
+      { name: 'template', maxCount: 1 },
+    ]),
+  )
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UpdateEventDto })
@@ -202,12 +218,18 @@ export class EventController {
   async update(
     @Param('id') id: string,
     @Body() updateEventDto: UpdateEventDto,
-    @UploadedFile('foto') file: Express.Multer.File,
-    @UploadedFile('template') templateFile: Express.Multer.File,
+    @UploadedFiles()
+    files: {
+      foto?: Express.Multer.File[];
+      template?: Express.Multer.File[];
+    },
     @User() user: JwtPayload,
   ) {
     const userId = Number(user.sub);
     await this.eventService.assertAuthenticatedUserExists(userId);
+
+    const file = files?.foto?.[0];
+    const templateFile = files?.template?.[0];
 
     let uploadedPhotoUrl: string | undefined;
     let uploadedTemplateUrl: string | undefined;
