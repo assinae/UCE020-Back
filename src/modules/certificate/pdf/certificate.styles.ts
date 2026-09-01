@@ -49,7 +49,7 @@ export const certificateStyles = StyleSheet.create({
 
   templateContent: {
     position: 'absolute',
-    top: 250,
+    top: 255,
     left: 64,
     right: 64,
     height: 250,
@@ -57,7 +57,7 @@ export const certificateStyles = StyleSheet.create({
   },
 
   templateCertTypeLabel: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: 700,
     color: '#24134B',
     letterSpacing: 1.6,
@@ -72,7 +72,7 @@ export const certificateStyles = StyleSheet.create({
   },
 
   templateEventName: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 700,
     color: '#24134B',
     textAlign: 'center',
@@ -81,7 +81,7 @@ export const certificateStyles = StyleSheet.create({
   },
 
   templateCertificamosQue: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: 700,
     color: '#64748B',
     letterSpacing: 1.8,
@@ -91,7 +91,7 @@ export const certificateStyles = StyleSheet.create({
   },
 
   templateParticipantName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 700,
     color: '#0F1D35',
     textAlign: 'center',
@@ -100,12 +100,12 @@ export const certificateStyles = StyleSheet.create({
   },
 
   templateDescriptionText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: 400,
     color: '#475467',
     textAlign: 'center',
     lineHeight: 1.45,
-    maxWidth: 520,
+    maxWidth: 540,
   },
 
   templateDetailsRow: {
@@ -122,7 +122,7 @@ export const certificateStyles = StyleSheet.create({
   },
 
   templateDetailLabel: {
-    fontSize: 7,
+    fontSize: 7.5,
     fontWeight: 700,
     color: '#64748B',
     letterSpacing: 1,
@@ -131,7 +131,7 @@ export const certificateStyles = StyleSheet.create({
   },
 
   templateDetailValue: {
-    fontSize: 8,
+    fontSize: 8.5,
     fontWeight: 700,
     color: '#0F1D35',
     textAlign: 'center',
