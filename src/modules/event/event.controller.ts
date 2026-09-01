@@ -50,7 +50,7 @@ export class EventController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('foto'))
+  @UseInterceptors(FileInterceptor('foto'), FileInterceptor('template'))
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateEventDto })
@@ -63,13 +63,15 @@ export class EventController {
   })
   async create(
     @Body() createEventDto: CreateEventDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile('foto') file: Express.Multer.File,
+    @UploadedFile('template') templateFile: Express.Multer.File,
     @User() user: JwtPayload,
   ) {
     const userId = Number(user.sub);
     await this.eventService.assertAuthenticatedUserExists(userId);
 
     let uploadedPhotoUrl: string | undefined;
+    let uploadedTemplateUrl: string | undefined;
 
     if (file) {
       uploadedPhotoUrl = await this.storage.uploadMulterFile(
@@ -87,11 +89,34 @@ export class EventController {
       createEventDto.foto = uploadedPhotoUrl;
     }
 
+    if (templateFile) {
+      uploadedTemplateUrl = await this.storage.uploadMulterFile(
+        'Outros',
+        templateFile,
+        userId,
+      );
+      createEventDto.templateUrl = uploadedTemplateUrl;
+      createEventDto.certificadoTemplate = uploadedTemplateUrl;
+      createEventDto.template = uploadedTemplateUrl;
+    } else if (createEventDto.templateUrl?.startsWith('data:')) {
+      uploadedTemplateUrl = await this.storage.uploadDataUrl(
+        'Outros',
+        createEventDto.templateUrl,
+        userId,
+      );
+      createEventDto.templateUrl = uploadedTemplateUrl;
+      createEventDto.certificadoTemplate = uploadedTemplateUrl;
+      createEventDto.template = uploadedTemplateUrl;
+    }
+
     try {
       return await this.eventService.create(createEventDto, userId);
     } catch (error) {
       if (uploadedPhotoUrl) {
         await this.storage.tryRemoveByPublicUrl(uploadedPhotoUrl);
+      }
+      if (uploadedTemplateUrl) {
+        await this.storage.tryRemoveByPublicUrl(uploadedTemplateUrl);
       }
 
       throw error;
@@ -162,7 +187,7 @@ export class EventController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('foto'))
+  @UseInterceptors(FileInterceptor('foto'), FileInterceptor('template'))
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UpdateEventDto })
@@ -177,13 +202,15 @@ export class EventController {
   async update(
     @Param('id') id: string,
     @Body() updateEventDto: UpdateEventDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile('foto') file: Express.Multer.File,
+    @UploadedFile('template') templateFile: Express.Multer.File,
     @User() user: JwtPayload,
   ) {
     const userId = Number(user.sub);
     await this.eventService.assertAuthenticatedUserExists(userId);
 
     let uploadedPhotoUrl: string | undefined;
+    let uploadedTemplateUrl: string | undefined;
 
     if (file) {
       uploadedPhotoUrl = await this.storage.uploadMulterFile(
@@ -201,11 +228,34 @@ export class EventController {
       updateEventDto.foto = uploadedPhotoUrl;
     }
 
+    if (templateFile) {
+      uploadedTemplateUrl = await this.storage.uploadMulterFile(
+        'Outros',
+        templateFile,
+        id,
+      );
+      updateEventDto.templateUrl = uploadedTemplateUrl;
+      updateEventDto.certificadoTemplate = uploadedTemplateUrl;
+      updateEventDto.template = uploadedTemplateUrl;
+    } else if (updateEventDto.templateUrl?.startsWith('data:')) {
+      uploadedTemplateUrl = await this.storage.uploadDataUrl(
+        'Outros',
+        updateEventDto.templateUrl,
+        id,
+      );
+      updateEventDto.templateUrl = uploadedTemplateUrl;
+      updateEventDto.certificadoTemplate = uploadedTemplateUrl;
+      updateEventDto.template = uploadedTemplateUrl;
+    }
+
     try {
       return await this.eventService.update(+id, updateEventDto, userId);
     } catch (error) {
       if (uploadedPhotoUrl) {
         await this.storage.tryRemoveByPublicUrl(uploadedPhotoUrl);
+      }
+      if (uploadedTemplateUrl) {
+        await this.storage.tryRemoveByPublicUrl(uploadedTemplateUrl);
       }
 
       throw error;
