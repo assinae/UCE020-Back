@@ -72,6 +72,14 @@ function buildDocument(data: ParticipantCertificateData) {
       Page,
       { size: 'A4', orientation: 'landscape', style: styles.page },
 
+      // Template do usuário como background da página
+      data.templateUrl
+        ? e(Image, {
+            src: data.templateUrl,
+            style: styles.templateBackground,
+          })
+        : null,
+
       // Borda verde
       e(View, { style: styles.outerBorder }),
 
@@ -80,13 +88,6 @@ function buildDocument(data: ParticipantCertificateData) {
       e(View, { style: styles.cornerTR }),
       e(View, { style: styles.cornerBL }),
       e(View, { style: styles.cornerBR }),
-
-      data.templateUrl
-        ? e(Image, {
-            src: data.templateUrl,
-            style: styles.templateBackground,
-          })
-        : null,
 
       e(
         View,

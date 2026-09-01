@@ -33,6 +33,7 @@ Font.register({
 export const certificateStyles = StyleSheet.create({
 
   page: {
+    position: 'relative',
     padding: 0,
     fontFamily: 'Poppins',
     backgroundColor: '#ffffff',
@@ -47,6 +48,7 @@ export const certificateStyles = StyleSheet.create({
     width: '100%',
     height: '100%',
     objectFit: 'cover',
+    zIndex: 0,
   },
 
   // Borda externa com cantos decorativos — linha verde
@@ -112,7 +114,12 @@ export const certificateStyles = StyleSheet.create({
 
   // Container principal
   content: {
-    flexGrow: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
     paddingHorizontal: 64,
     paddingTop: 32,
     paddingBottom: 28,
@@ -123,8 +130,8 @@ export const certificateStyles = StyleSheet.create({
   },
 
   contentWithTemplate: {
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    borderRadius: 18,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
     paddingHorizontal: 48,
     paddingTop: 26,
     paddingBottom: 24,

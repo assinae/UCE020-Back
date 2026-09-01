@@ -60,18 +60,18 @@ function buildDocument(data: GuestCertificateData) {
       Page,
       { size: 'A4', orientation: 'landscape', style: styles.page },
 
-      e(View, { style: styles.outerBorder }),
-      e(View, { style: styles.cornerTL }),
-      e(View, { style: styles.cornerTR }),
-      e(View, { style: styles.cornerBL }),
-      e(View, { style: styles.cornerBR }),
-
       data.templateUrl
         ? e(Image, {
             src: data.templateUrl,
             style: styles.templateBackground,
           })
         : null,
+
+      e(View, { style: styles.outerBorder }),
+      e(View, { style: styles.cornerTL }),
+      e(View, { style: styles.cornerTR }),
+      e(View, { style: styles.cornerBL }),
+      e(View, { style: styles.cornerBR }),
 
       e(
         View,
