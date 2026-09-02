@@ -99,6 +99,11 @@ export interface EventoCertParaRender {
   templateUrl: string | null;
   certificadoTemplate: string | null;
   template: string | null;
+  certificadoTitulo: string | null;
+  certificadoSubtitulo: string | null;
+  certificadoDescricaoInicio: string | null;
+  certificadoDescricaoEvento: string | null;
+  certificadoDescricaoCargaHoraria: string | null;
   assinado: boolean;
   assinadoEm: Date | null;
   assinaturaNome: string | null;
@@ -886,6 +891,12 @@ export class CertificateRepository {
         templateUrl: tabelaEvento.templateUrl,
         certificadoTemplate: tabelaEvento.certificadoTemplate,
         template: tabelaEvento.template,
+        certificadoTitulo: tabelaEvento.certificadoTitulo,
+        certificadoSubtitulo: tabelaEvento.certificadoSubtitulo,
+        certificadoDescricaoInicio: tabelaEvento.certificadoDescricaoInicio,
+        certificadoDescricaoEvento: tabelaEvento.certificadoDescricaoEvento,
+        certificadoDescricaoCargaHoraria:
+          tabelaEvento.certificadoDescricaoCargaHoraria,
         assinado: tabelaCertificadoEvento.assinado,
         assinadoEm: tabelaCertificadoEvento.assinadoEm,
         assinaturaNome: tabelaCertificadoEvento.assinaturaNome,

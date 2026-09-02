@@ -15,12 +15,25 @@ import {
 } from '../../db/schema';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { CertificateCustomizationPreviewDto } from './dto/certificate-customization-preview.dto';
 import { ActivityService } from '../activity/activity.service';
 import { assertEventOrganizer } from 'src/common/helpers/assert-event-organizer.helper';
 import { SupabaseStorageService } from 'src/common/storage/supabase-storage.service';
 import { parseEventDate } from 'src/common/helpers/parse-event-date.helper';
+import { renderParticipantCertificatePdf } from '../certificate/pdf/participant-certificate.pdf';
+import { formatDateRange } from '../certificate/pdf/format-date-range';
+import { gerarQrPng } from '../certificate/signature/qr';
+import { urlVerificacao } from '../certificate/signature/signature-format';
 
 export type TipoParticipante = 'participante' | 'organizador' | 'monitor';
+
+const DEFAULT_CERTIFICATE_TEXTS = {
+  titulo: 'CERTIFICADO DE PARTICIPAÇÃO',
+  subtitulo: '',
+  descricaoInicio: 'participou do evento ',
+  descricaoEvento: ', com carga horária de ',
+  descricaoCargaHoraria: ' pela participação.',
+};
 
 @Injectable()
 export class EventService {
@@ -85,6 +98,77 @@ export class EventService {
     return { foto: uploadedUrl, uploadedUrl };
   }
 
+  private resolveCertificateCustomization(dto: {
+    certificadoPersonalizacao?: CreateEventDto['certificadoPersonalizacao'];
+  }) {
+    const textos = dto.certificadoPersonalizacao?.textos;
+
+    return {
+      certificadoTitulo: textos?.titulo?.trim() || null,
+      certificadoSubtitulo: textos?.subtitulo?.trim() || null,
+      certificadoDescricaoInicio: textos?.descricaoInicio?.trim() || null,
+      certificadoDescricaoEvento: textos?.descricaoEvento?.trim() || null,
+      certificadoDescricaoCargaHoraria:
+        textos?.descricaoCargaHoraria?.trim() || null,
+    };
+  }
+
+  async previewDefaultCertificateCustomization(
+    dto: CertificateCustomizationPreviewDto,
+    templateUrl?: string,
+  ) {
+    return {
+      textos: {
+        ...DEFAULT_CERTIFICATE_TEXTS,
+        subtitulo: dto.evento.nome,
+      },
+      previewPdf: await this.renderCertificateCustomizationPreview(
+        {
+          ...dto,
+          textos: {
+            ...DEFAULT_CERTIFICATE_TEXTS,
+            subtitulo: dto.evento.nome,
+          },
+        },
+        templateUrl,
+      ),
+    };
+  }
+
+  async renderCertificateCustomizationPreview(
+    dto: CertificateCustomizationPreviewDto,
+    templateUrl?: string,
+  ) {
+    const issueDate = new Date();
+    const qr = await gerarQrPng(urlVerificacao('PREVIEW-ASSINAE'));
+
+    return renderParticipantCertificatePdf({
+      certificateId: 0,
+      participantName: 'Nome do participante',
+      role: 'Ouvinte',
+      eventName: dto.evento.nome,
+      workloadHours: dto.evento.cargaHoraria,
+      location: dto.evento.localizacao,
+      eventDate: formatDateRange(
+        parseEventDate(dto.evento.dataInicio),
+        parseEventDate(dto.evento.dataFim),
+      ),
+      issueDate,
+      templateUrl: templateUrl ?? dto.template,
+      textos: dto.textos,
+      assinatura: {
+        nome: 'Assinaê',
+        data: issueDate.toLocaleString('pt-BR', {
+          timeZone: 'America/Bahia',
+          dateStyle: 'short',
+          timeStyle: 'short',
+        }),
+        codigo: 'PREVIEW-ASSINAE',
+        qr: qr ? { data: qr, format: 'png' as const } : undefined,
+      },
+    });
+  }
+
   async create(createEventDto: CreateEventDto, userId: number) {
     await this.assertAuthenticatedUserExists(userId);
 
@@ -109,6 +193,7 @@ export class EventService {
           templateUrl: createEventDto.templateUrl ?? null,
           certificadoTemplate: createEventDto.certificadoTemplate ?? null,
           template: createEventDto.template ?? null,
+          ...this.resolveCertificateCustomization(createEventDto),
         })
         .returning();
 
@@ -314,7 +399,13 @@ export class EventService {
 
     await assertEventOrganizer(userId, eventoExistente.id);
 
-    const { atividades, dataInicio, dataFim, ...dadosEvento } = updateEventDto;
+    const {
+      atividades,
+      dataInicio,
+      dataFim,
+      certificadoPersonalizacao,
+      ...dadosEvento
+    } = updateEventDto;
 
     const [eventoAtualizado] = await db
       .update(tabelaEvento)
@@ -334,6 +425,11 @@ export class EventService {
         }),
         ...(updateEventDto.template !== undefined && {
           template: updateEventDto.template ?? null,
+        }),
+        ...(certificadoPersonalizacao !== undefined && {
+          ...this.resolveCertificateCustomization({
+            certificadoPersonalizacao,
+          }),
         }),
       })
       .where(eq(tabelaEvento.id, id))

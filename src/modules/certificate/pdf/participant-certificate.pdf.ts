@@ -26,6 +26,7 @@ export type ParticipantCertificateData = {
   assinante2Nome?: string;
   assinante2Titulo?: string;
   templateUrl?: string | null;
+  textos?: ParticipantCertificateTexts;
   // Dados da assinatura digital (preenchidos no ato da assinatura).
   assinatura?: {
     nome: string;
@@ -33,6 +34,14 @@ export type ParticipantCertificateData = {
     codigo: string;
     qr?: { data: Buffer; format: 'png' };
   };
+};
+
+export type ParticipantCertificateTexts = {
+  titulo?: string | null;
+  subtitulo?: string | null;
+  descricaoInicio?: string | null;
+  descricaoEvento?: string | null;
+  descricaoCargaHoraria?: string | null;
 };
 
 const ROLE_CERT_TITLE: Record<string, string> = {
@@ -60,8 +69,19 @@ function buildRoleVerb(
 
 function buildDocument(data: ParticipantCertificateData) {
   const e = React.createElement;
-  const certTitle = ROLE_CERT_TITLE[data.role] ?? 'CERTIFICADO DE PARTICIPAÇÃO';
+  const certTitle =
+    data.textos?.titulo?.trim() ||
+    ROLE_CERT_TITLE[data.role] ||
+    'CERTIFICADO DE PARTICIPAÇÃO';
+  const subtitle = data.textos?.subtitulo?.trim() || data.eventName;
   const roleVerb = buildRoleVerb(data.role, data.contextLabel ?? 'evento');
+  const descricaoInicio =
+    data.textos?.descricaoInicio?.trim() || `${roleVerb} `;
+  const descricaoEvento =
+    data.textos?.descricaoEvento?.trim() ||
+    (data.workloadHours ? ', com carga horária de ' : '.');
+  const descricaoCargaHoraria =
+    data.textos?.descricaoCargaHoraria?.trim() || ' pela participação.';
   const renderDefaultBranding = shouldRenderDefaultBranding(data.templateUrl);
   const hasTemplate = !renderDefaultBranding;
   const templateSrc =
@@ -89,7 +109,7 @@ function buildDocument(data: ParticipantCertificateData) {
             View,
             { style: styles.templateBodySection },
             e(Text, { style: styles.templateCertTypeLabel }, certTitle),
-            e(Text, { style: styles.templateEventName }, data.eventName),
+            e(Text, { style: styles.templateEventName }, subtitle),
             e(
               Text,
               { style: styles.templateCertificamosQue },
@@ -103,13 +123,13 @@ function buildDocument(data: ParticipantCertificateData) {
             e(
               Text,
               { style: styles.templateDescriptionText },
-              `${roleVerb} `,
+              descricaoInicio,
               e(
                 Text,
                 { style: { fontWeight: 700, color: '#0F1D35' } },
                 `"${data.eventName}"`,
               ),
-              data.workloadHours ? ', com carga horária de ' : '.',
+              descricaoEvento,
             ),
             ...(data.workloadHours
               ? [
@@ -128,7 +148,7 @@ function buildDocument(data: ParticipantCertificateData) {
                       },
                       `${data.workloadHours} hora(s)`,
                     ),
-                    ' pela participação.',
+                    descricaoCargaHoraria,
                   ),
                 ]
               : []),
@@ -266,7 +286,7 @@ function buildDocument(data: ParticipantCertificateData) {
           View,
           { style: styles.certTypeSection },
           e(Text, { style: styles.certTypeLabel }, certTitle),
-          e(Text, { style: styles.eventName }, data.eventName),
+          e(Text, { style: styles.eventName }, subtitle),
         ),
 
         e(
@@ -277,9 +297,9 @@ function buildDocument(data: ParticipantCertificateData) {
           e(
             Text,
             { style: styles.descriptionText },
-            `${roleVerb} `,
+            descricaoInicio,
             e(Text, { style: styles.descriptionBold }, `"${data.eventName}"`),
-            data.workloadHours ? ', com carga horária de ' : '.',
+            descricaoEvento,
           ),
           ...(data.workloadHours
             ? [
@@ -291,7 +311,7 @@ function buildDocument(data: ParticipantCertificateData) {
                     { style: styles.descriptionBold },
                     `${data.workloadHours} hora(s)`,
                   ),
-                  ' pela participação.',
+                  descricaoCargaHoraria,
                 ),
               ]
             : []),

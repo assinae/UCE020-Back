@@ -112,6 +112,13 @@ export class CertificatePdfService {
         certificadoTemplate: cert.certificadoTemplate,
         template: cert.template,
       }),
+      textos: {
+        titulo: cert.certificadoTitulo,
+        subtitulo: cert.certificadoSubtitulo,
+        descricaoInicio: cert.certificadoDescricaoInicio,
+        descricaoEvento: cert.certificadoDescricaoEvento,
+        descricaoCargaHoraria: cert.certificadoDescricaoCargaHoraria,
+      },
     };
 
     const etag = this.calcularEtag('user', dados, cert);

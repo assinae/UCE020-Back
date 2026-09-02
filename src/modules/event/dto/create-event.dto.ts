@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsString,
   IsDateString,
@@ -6,8 +6,53 @@ import {
   IsInt,
   IsOptional,
   IsEnum,
+  IsObject,
+  ValidateNested,
 } from 'class-validator';
 import { CreateActivityDto } from 'src/modules/activity/dto/create-activity.dto';
+
+function parseJsonField(value: unknown) {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return value;
+  }
+}
+
+export class CertificateCustomizationTextsDto {
+  @IsString()
+  @IsOptional()
+  titulo?: string;
+
+  @IsString()
+  @IsOptional()
+  subtitulo?: string;
+
+  @IsString()
+  @IsOptional()
+  descricaoInicio?: string;
+
+  @IsString()
+  @IsOptional()
+  descricaoEvento?: string;
+
+  @IsString()
+  @IsOptional()
+  descricaoCargaHoraria?: string;
+}
+
+export class CertificateCustomizationDto {
+  @IsString()
+  @IsOptional()
+  template?: string;
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CertificateCustomizationTextsDto)
+  @IsOptional()
+  textos?: CertificateCustomizationTextsDto;
+}
 
 export class CreateEventDto {
   @IsString()
@@ -55,6 +100,14 @@ export class CreateEventDto {
   @IsString()
   @IsOptional()
   template?: string;
+
+  @Transform(({ value }: { value: unknown }) =>
+    plainToInstance(CertificateCustomizationDto, parseJsonField(value)),
+  )
+  @ValidateNested()
+  @Type(() => CertificateCustomizationDto)
+  @IsOptional()
+  certificadoPersonalizacao?: CertificateCustomizationDto;
 
   @Type(() => Array)
   @IsOptional()

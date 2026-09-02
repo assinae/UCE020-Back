@@ -12,8 +12,10 @@ import {
   BadRequestException,
   UploadedFiles,
   UseInterceptors,
+  Res,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -28,6 +30,7 @@ import type { TipoParticipante } from './event.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
+import { CertificateCustomizationPreviewDto } from './dto/certificate-customization-preview.dto';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 import type { JwtPayload } from 'src/common/types/jwt-payload.type';
 import { User } from 'src/common/decorators/usuario.decorator';
@@ -131,6 +134,110 @@ export class EventController {
       }
 
       throw error;
+    }
+  }
+
+  @Post('certificate/customization/default')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'template', maxCount: 1 }]))
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary:
+      'Pré-visualizar o certificado padrão do Assinaê para um evento em edição',
+  })
+  async previewDefaultCertificateCustomization(
+    @Body() dto: CertificateCustomizationPreviewDto,
+    @UploadedFiles() files: { template?: Express.Multer.File[] },
+    @User() user: JwtPayload,
+    @Res() res: Response,
+  ) {
+    const userId = Number(user.sub);
+    await this.eventService.assertAuthenticatedUserExists(userId);
+
+    const templateFile = files?.template?.[0];
+    let uploadedTemplateUrl: string | undefined;
+
+    if (templateFile) {
+      uploadedTemplateUrl = await this.storage.uploadMulterFile(
+        'Outros',
+        templateFile,
+        userId,
+      );
+    }
+
+    try {
+      const { textos, previewPdf } =
+        await this.eventService.previewDefaultCertificateCustomization(
+          dto,
+          uploadedTemplateUrl,
+        );
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        'inline; filename="certificado-preview-padrao.pdf"',
+      );
+      res.setHeader(
+        'X-Certificate-Default-Texts',
+        encodeURIComponent(JSON.stringify(textos)),
+      );
+      res.setHeader('Content-Length', previewPdf.length);
+      res.send(previewPdf);
+    } finally {
+      if (uploadedTemplateUrl) {
+        await this.storage.tryRemoveByPublicUrl(uploadedTemplateUrl);
+      }
+    }
+  }
+
+  @Post('certificate/customization/preview')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'template', maxCount: 1 }]))
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary:
+      'Gerar PDF de pré-visualização com a personalização atual do certificado',
+  })
+  async previewCertificateCustomization(
+    @Body() dto: CertificateCustomizationPreviewDto,
+    @UploadedFiles() files: { template?: Express.Multer.File[] },
+    @User() user: JwtPayload,
+    @Res() res: Response,
+  ) {
+    const userId = Number(user.sub);
+    await this.eventService.assertAuthenticatedUserExists(userId);
+
+    const templateFile = files?.template?.[0];
+    let uploadedTemplateUrl: string | undefined;
+
+    if (templateFile) {
+      uploadedTemplateUrl = await this.storage.uploadMulterFile(
+        'Outros',
+        templateFile,
+        userId,
+      );
+    }
+
+    try {
+      const previewPdf =
+        await this.eventService.renderCertificateCustomizationPreview(
+          dto,
+          uploadedTemplateUrl,
+        );
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        'inline; filename="certificado-preview.pdf"',
+      );
+      res.setHeader('Content-Length', previewPdf.length);
+      res.send(previewPdf);
+    } finally {
+      if (uploadedTemplateUrl) {
+        await this.storage.tryRemoveByPublicUrl(uploadedTemplateUrl);
+      }
     }
   }
 

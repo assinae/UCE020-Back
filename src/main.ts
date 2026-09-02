@@ -36,6 +36,7 @@ async function bootstrap() {
     origin: process.env.FRONTEND_URL,
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     credentials: true,
+    exposedHeaders: ['X-Certificate-Default-Texts'],
   });
 
   setupSwagger(app);
