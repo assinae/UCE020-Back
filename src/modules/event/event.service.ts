@@ -117,20 +117,25 @@ export class EventService {
     dto: CertificateCustomizationPreviewDto,
     templateUrl?: string,
   ) {
+    const textos = {
+      ...DEFAULT_CERTIFICATE_TEXTS,
+      ...(dto.textos ?? dto.certificadoPersonalizacao?.textos ?? {}),
+      subtitulo:
+        dto.textos?.subtitulo ??
+        dto.certificadoPersonalizacao?.textos?.subtitulo ??
+        dto.evento.nome,
+    };
+
     return {
-      textos: {
-        ...DEFAULT_CERTIFICATE_TEXTS,
-        subtitulo: dto.evento.nome,
-      },
+      textos,
       previewPdf: await this.renderCertificateCustomizationPreview(
         {
           ...dto,
-          textos: {
-            ...DEFAULT_CERTIFICATE_TEXTS,
-            subtitulo: dto.evento.nome,
-          },
+          textos,
         },
-        templateUrl,
+        templateUrl ??
+          dto.templateUrl ??
+          dto.certificadoPersonalizacao?.templateUrl,
       ),
     };
   }
@@ -141,6 +146,7 @@ export class EventService {
   ) {
     const issueDate = new Date();
     const qr = await gerarQrPng(urlVerificacao('PREVIEW-ASSINAE'));
+    const textos = dto.textos ?? dto.certificadoPersonalizacao?.textos;
 
     return renderParticipantCertificatePdf({
       certificateId: 0,
@@ -154,8 +160,12 @@ export class EventService {
         parseEventDate(dto.evento.dataFim),
       ),
       issueDate,
-      templateUrl: templateUrl ?? dto.template,
-      textos: dto.textos,
+      templateUrl:
+        templateUrl ??
+        dto.templateUrl ??
+        dto.certificadoPersonalizacao?.templateUrl ??
+        dto.template,
+      textos,
       assinatura: {
         nome: 'Assinaê',
         data: issueDate.toLocaleString('pt-BR', {
@@ -374,6 +384,16 @@ export class EventService {
       message: 'Evento encontrado.',
       data: {
         ...evento,
+        certificadoPersonalizacao: {
+          templateUrl: evento.templateUrl,
+          textos: {
+            titulo: evento.certificadoTitulo,
+            subtitulo: evento.certificadoSubtitulo,
+            descricaoInicio: evento.certificadoDescricaoInicio,
+            descricaoEvento: evento.certificadoDescricaoEvento,
+            descricaoCargaHoraria: evento.certificadoDescricaoCargaHoraria,
+          },
+        },
         atividades: atividadesFormatadas,
         totalInscritos,
       },
@@ -403,12 +423,23 @@ export class EventService {
       atividades,
       dataInicio,
       dataFim,
-      certificadoPersonalizacao,
+      certificadoPersonalizacao: certificadoPersonalizacaoRecebida,
       ...dadosEvento
     } = updateEventDto;
+    // PartialType deixa o campo aninhado como any; a validação do DTO já ocorreu na entrada.
+    const certificadoPersonalizacao = certificadoPersonalizacaoRecebida;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const hasCustomizationTemplateUrl =
+      certificadoPersonalizacao !== undefined
+        ? Object.prototype.hasOwnProperty.call(
+            certificadoPersonalizacao,
+            'templateUrl',
+          )
+        : false;
 
     const [eventoAtualizado] = await db
       .update(tabelaEvento)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       .set({
         ...dadosEvento,
         ...(dataInicio !== undefined && {
@@ -426,6 +457,11 @@ export class EventService {
         ...(updateEventDto.template !== undefined && {
           template: updateEventDto.template ?? null,
         }),
+        ...(hasCustomizationTemplateUrl && {
+          templateUrl: certificadoPersonalizacao?.templateUrl ?? null,
+          certificadoTemplate: certificadoPersonalizacao?.templateUrl ?? null,
+          template: certificadoPersonalizacao?.templateUrl ?? null,
+        }),
         ...(certificadoPersonalizacao !== undefined && {
           ...this.resolveCertificateCustomization({
             certificadoPersonalizacao,
@@ -434,6 +470,13 @@ export class EventService {
       })
       .where(eq(tabelaEvento.id, id))
       .returning();
+
+    if (
+      eventoExistente.templateUrl &&
+      eventoExistente.templateUrl !== eventoAtualizado?.templateUrl
+    ) {
+      await this.storage.tryRemoveByPublicUrl(eventoExistente.templateUrl);
+    }
 
     if (
       dadosEvento.foto &&

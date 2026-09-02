@@ -11,6 +11,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import {
+  CertificateCustomizationDto,
   CertificateCustomizationTextsDto,
   CERTIFICATE_TEXT_LIMITS,
 } from './create-event.dto';
@@ -68,6 +69,10 @@ export class CertificateCustomizationPreviewDto {
   @IsOptional()
   template?: string;
 
+  @IsString()
+  @IsOptional()
+  templateUrl?: string;
+
   @Transform(({ value }: { value: unknown }) =>
     plainToInstance(CertificateCustomizationTextsDto, parseJsonField(value)),
   )
@@ -75,4 +80,12 @@ export class CertificateCustomizationPreviewDto {
   @ValidateNested()
   @IsOptional()
   textos?: CertificateCustomizationTextsDto;
+
+  @Transform(({ value }: { value: unknown }) =>
+    plainToInstance(CertificateCustomizationDto, parseJsonField(value)),
+  )
+  @IsObject()
+  @ValidateNested()
+  @IsOptional()
+  certificadoPersonalizacao?: CertificateCustomizationDto;
 }

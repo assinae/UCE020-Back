@@ -96,6 +96,10 @@ export class CertificateCustomizationDto {
   @IsOptional()
   template?: string;
 
+  @IsString()
+  @IsOptional()
+  templateUrl?: string;
+
   @IsObject()
   @ValidateNested()
   @Type(() => CertificateCustomizationTextsDto)

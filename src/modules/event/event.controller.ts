@@ -170,7 +170,9 @@ export class EventController {
       const { textos, previewPdf } =
         await this.eventService.previewDefaultCertificateCustomization(
           dto,
-          uploadedTemplateUrl,
+          uploadedTemplateUrl ??
+            dto.templateUrl ??
+            dto.certificadoPersonalizacao?.templateUrl,
         );
 
       res.setHeader('Content-Type', 'application/pdf');
@@ -224,7 +226,9 @@ export class EventController {
       const previewPdf =
         await this.eventService.renderCertificateCustomizationPreview(
           dto,
-          uploadedTemplateUrl,
+          uploadedTemplateUrl ??
+            dto.templateUrl ??
+            dto.certificadoPersonalizacao?.templateUrl,
         );
 
       res.setHeader('Content-Type', 'application/pdf');
