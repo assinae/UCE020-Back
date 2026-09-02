@@ -3,10 +3,7 @@ import { Document, Page, Text, View, Image, pdf } from '@react-pdf/renderer';
 import { streamToBuffer } from './stream-to-buffer';
 import { certificateStyles as styles } from './certificate.styles';
 import { formatDate } from './format-date-range';
-import {
-  LOGO_ASSINAE_SRC,
-  LOGO_UEFS_SRC,
-} from 'src/resources/certificatesConfig/certificate.assets';
+import { LOGO_ASSINAE_SRC } from 'src/resources/certificatesConfig/certificate.assets';
 import { shouldRenderDefaultBranding } from './certificate-template';
 
 export type GuestCertificateData = {
@@ -128,12 +125,6 @@ function buildDocument(data: GuestCertificateData) {
               e(
                 View,
                 { style: styles.templateDetailBlock },
-                e(Text, { style: styles.templateDetailLabel }, 'Local'),
-                e(Text, { style: styles.templateDetailValue }, data.location),
-              ),
-              e(
-                View,
-                { style: styles.templateDetailBlock },
                 e(Text, { style: styles.templateDetailLabel }, 'Período'),
                 e(Text, { style: styles.templateDetailValue }, data.eventDate),
               ),
@@ -166,18 +157,26 @@ function buildDocument(data: GuestCertificateData) {
                 View,
                 { style: styles.signatureStamp },
                 data.assinatura.qr
-                  ? e(Image, {
-                      src: data.assinatura.qr,
-                      style: styles.signatureQr,
-                    })
+                  ? e(
+                      View,
+                      { style: styles.signatureQrWrapper },
+                      e(Image, {
+                        src: data.assinatura.qr,
+                        style: styles.signatureQr,
+                      }),
+                      e(
+                        View,
+                        { style: styles.signatureQrLogoBackground },
+                        e(Image, {
+                          src: LOGO_ASSINAE_SRC,
+                          style: styles.signatureQrLogo,
+                        }),
+                      ),
+                    )
                   : null,
                 e(
                   View,
                   { style: styles.signatureInfo },
-                  e(Image, {
-                    src: LOGO_ASSINAE_SRC,
-                    style: styles.signatureLogo,
-                  }),
                   e(
                     Text,
                     { style: styles.signatureLabel },
@@ -207,18 +206,8 @@ function buildDocument(data: GuestCertificateData) {
           { style: styles.templateFooterSection },
           e(
             Text,
-            { style: styles.templateFooterLeft },
-            `Emitido em ${formatDate(data.issueDate)}`,
-          ),
-          e(
-            Text,
             { style: styles.templateFooterCenter },
-            'Universidade Estadual de Feira de Santana — UEFS',
-          ),
-          e(
-            Text,
-            { style: styles.templateFooterRight },
-            `Certificado nº ${data.certificateId}`,
+            `Emitido em ${formatDate(data.issueDate)}`,
           ),
         ),
       ),
@@ -302,13 +291,6 @@ function buildDocument(data: GuestCertificateData) {
             e(
               View,
               { style: styles.detailBlock },
-              e(Text, { style: styles.detailLabel }, 'Local'),
-              e(Text, { style: styles.detailValue }, data.location),
-            ),
-            e(View, { style: styles.detailSeparator }),
-            e(
-              View,
-              { style: styles.detailBlock },
               e(Text, { style: styles.detailLabel }, 'Período'),
               e(Text, { style: styles.detailValue }, data.eventDate),
             ),
@@ -339,18 +321,26 @@ function buildDocument(data: GuestCertificateData) {
                 View,
                 { style: styles.signatureStamp },
                 data.assinatura.qr
-                  ? e(Image, {
-                      src: data.assinatura.qr,
-                      style: styles.signatureQr,
-                    })
+                  ? e(
+                      View,
+                      { style: styles.signatureQrWrapper },
+                      e(Image, {
+                        src: data.assinatura.qr,
+                        style: styles.signatureQr,
+                      }),
+                      e(
+                        View,
+                        { style: styles.signatureQrLogoBackground },
+                        e(Image, {
+                          src: LOGO_ASSINAE_SRC,
+                          style: styles.signatureQrLogo,
+                        }),
+                      ),
+                    )
                   : null,
                 e(
                   View,
                   { style: styles.signatureInfo },
-                  e(Image, {
-                    src: LOGO_ASSINAE_SRC,
-                    style: styles.signatureLogo,
-                  }),
                   e(
                     Text,
                     { style: styles.signatureLabel },
@@ -376,34 +366,14 @@ function buildDocument(data: GuestCertificateData) {
             : null,
         ),
 
-        // Apoio (fixa) — logo UEFS
-        renderDefaultBranding
-          ? e(
-              View,
-              { style: styles.apoioSection },
-              e(Text, { style: styles.apoioLabel }, 'Apoio:'),
-              e(Image, { src: LOGO_UEFS_SRC, style: styles.apoioLogo }),
-            )
-          : null,
-
         // Rodapé
         e(
           View,
           { style: styles.footerSection },
           e(
             Text,
-            { style: styles.footerLeft },
+            { style: { ...styles.footerCenter, flex: 1 } },
             `Emitido em ${formatDate(data.issueDate)}`,
-          ),
-          e(
-            Text,
-            { style: styles.footerCenter },
-            'Universidade Estadual de Feira de Santana — UEFS',
-          ),
-          e(
-            Text,
-            { style: styles.footerRight },
-            `Certificado nº ${data.certificateId}`,
           ),
         ),
       ),

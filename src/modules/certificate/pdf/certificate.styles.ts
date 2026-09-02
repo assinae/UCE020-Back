@@ -140,9 +140,9 @@ export const certificateStyles = StyleSheet.create({
   templateSignatureArea: {
     position: 'absolute',
     left: '50%',
-    bottom: 40,
-    width: 220,
-    height: 86,
+    bottom: 28,
+    width: 200,
+    height: 70,
     marginLeft: -125,
     alignItems: 'center',
     justifyContent: 'center',
@@ -339,7 +339,7 @@ export const certificateStyles = StyleSheet.create({
     color: '#0F1D35',
   },
 
-  // Linha de detalhes — local, período, carga horária
+  // Linha de detalhes — período e carga horária
   detailsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -379,7 +379,7 @@ export const certificateStyles = StyleSheet.create({
   // Quando o certificado é assinado, o bloco abaixo é renderizado centralizado.
   signatureArea: {
     width: '100%',
-    height: 96,
+    height: 60,
     marginTop: 28,
     alignItems: 'center',
     justifyContent: 'center',
@@ -390,24 +390,44 @@ export const certificateStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 14,
+    gap: 6,
+    height: 60,
+  },
+
+  signatureQrWrapper: {
+    position: 'relative',
+    width: 60,
+    height: 60,
   },
 
   signatureQr: {
-    width: 64,
-    height: 64,
+    width: 60,
+    height: 60,
+    objectFit: 'contain',
+  },
+
+  signatureQrLogoBackground: {
+    position: 'absolute',
+    left: 20,
+    top: 20,
+    width: 20,
+    height: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: '2px',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  signatureQrLogo: {
+    width: 18,
+    height: 18,
     objectFit: 'contain',
   },
 
   signatureInfo: {
+    height: 60,
     alignItems: 'flex-start',
-  },
-
-  signatureLogo: {
-    width: 82,
-    height: 26,
-    objectFit: 'contain',
-    marginBottom: 3,
+    justifyContent: 'center',
   },
 
   signatureLabel: {

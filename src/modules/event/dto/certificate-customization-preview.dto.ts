@@ -6,10 +6,14 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
-import { CertificateCustomizationTextsDto } from './create-event.dto';
+import {
+  CertificateCustomizationTextsDto,
+  CERTIFICATE_TEXT_LIMITS,
+} from './create-event.dto';
 
 function parseJsonField(value: unknown) {
   if (typeof value !== 'string') return value;
@@ -22,6 +26,7 @@ function parseJsonField(value: unknown) {
 
 export class CertificateCustomizationPreviewEventDto {
   @IsString()
+  @MaxLength(CERTIFICATE_TEXT_LIMITS.nomeEvento)
   nome!: string;
 
   @IsString()
@@ -50,7 +55,10 @@ export class CertificateCustomizationPreviewEventDto {
 
 export class CertificateCustomizationPreviewDto {
   @Transform(({ value }: { value: unknown }) =>
-    plainToInstance(CertificateCustomizationPreviewEventDto, parseJsonField(value)),
+    plainToInstance(
+      CertificateCustomizationPreviewEventDto,
+      parseJsonField(value),
+    ),
   )
   @IsObject()
   @ValidateNested()

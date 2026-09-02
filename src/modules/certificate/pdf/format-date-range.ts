@@ -19,5 +19,5 @@ export function formatDateRange(dataInicio: Date, dataFim: Date): string {
   const inicio = formatDate(dataInicio);
   const fim = formatDate(dataFim);
 
-  return inicio === fim ? inicio : `${inicio} a ${fim}`;
+  return inicio === fim ? inicio : `${inicio} - ${fim}`;
 }

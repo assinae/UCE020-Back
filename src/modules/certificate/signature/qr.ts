@@ -27,7 +27,7 @@ export async function gerarQrPng(texto: string): Promise<Buffer | null> {
       type: 'png',
       width: 240,
       margin: 1,
-      errorCorrectionLevel: 'M',
+      errorCorrectionLevel: 'H',
       color: {
         dark: '#0F1D35ff',
         light: '#ffffffff',
