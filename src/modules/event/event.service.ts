@@ -15,12 +15,34 @@ import {
 } from '../../db/schema';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { CertificateCustomizationPreviewDto } from './dto/certificate-customization-preview.dto';
 import { ActivityService } from '../activity/activity.service';
 import { assertEventOrganizer } from 'src/common/helpers/assert-event-organizer.helper';
 import { SupabaseStorageService } from 'src/common/storage/supabase-storage.service';
 import { parseEventDate } from 'src/common/helpers/parse-event-date.helper';
+import { renderParticipantCertificatePdf } from '../certificate/pdf/participant-certificate.pdf';
+import { formatDateRange } from '../certificate/pdf/format-date-range';
+import { gerarQrPng } from '../certificate/signature/qr';
+import { urlVerificacao } from '../certificate/signature/signature-format';
 
 export type TipoParticipante = 'participante' | 'organizador' | 'monitor';
+
+const DEFAULT_CERTIFICATE_TEXTS = {
+  titulo: 'CERTIFICADO DE PARTICIPAÇÃO',
+  subtitulo: '',
+  descricaoInicio: 'participou do evento ',
+  descricaoEvento: ', com carga horária de ',
+  descricaoCargaHoraria: ' pela participação.',
+};
+
+type CertificateCustomizationRecord = {
+  templateUrl?: string | null;
+  certificadoTitulo?: string | null;
+  certificadoSubtitulo?: string | null;
+  certificadoDescricaoInicio?: string | null;
+  certificadoDescricaoEvento?: string | null;
+  certificadoDescricaoCargaHoraria?: string | null;
+};
 
 @Injectable()
 export class EventService {
@@ -85,6 +107,120 @@ export class EventService {
     return { foto: uploadedUrl, uploadedUrl };
   }
 
+  private resolveCertificateCustomization(dto: {
+    certificadoPersonalizacao?: CreateEventDto['certificadoPersonalizacao'];
+  }) {
+    const textos = dto.certificadoPersonalizacao?.textos;
+
+    return {
+      certificadoTitulo: textos?.titulo?.trim() || null,
+      certificadoSubtitulo: textos?.subtitulo?.trim() || null,
+      certificadoDescricaoInicio: textos?.descricaoInicio?.trim() || null,
+      certificadoDescricaoEvento: textos?.descricaoEvento?.trim() || null,
+      certificadoDescricaoCargaHoraria:
+        textos?.descricaoCargaHoraria?.trim() || null,
+    };
+  }
+
+  private formatCertificateCustomization(
+    evento: CertificateCustomizationRecord & { nome: string },
+  ) {
+    return {
+      templateUrl: evento.templateUrl ?? null,
+      textos: {
+        titulo: evento.certificadoTitulo ?? DEFAULT_CERTIFICATE_TEXTS.titulo,
+        subtitulo:
+          (evento.certificadoSubtitulo ??
+            DEFAULT_CERTIFICATE_TEXTS.subtitulo) ||
+          evento.nome,
+        descricaoInicio:
+          evento.certificadoDescricaoInicio ??
+          DEFAULT_CERTIFICATE_TEXTS.descricaoInicio,
+        descricaoEvento:
+          evento.certificadoDescricaoEvento ??
+          DEFAULT_CERTIFICATE_TEXTS.descricaoEvento,
+        descricaoCargaHoraria:
+          evento.certificadoDescricaoCargaHoraria ??
+          DEFAULT_CERTIFICATE_TEXTS.descricaoCargaHoraria,
+      },
+    };
+  }
+
+  async previewDefaultCertificateCustomization(
+    dto: CertificateCustomizationPreviewDto,
+    templateUrl?: string,
+  ) {
+    const textos = {
+      ...DEFAULT_CERTIFICATE_TEXTS,
+      ...(dto.textos ?? dto.certificadoPersonalizacao?.textos ?? {}),
+      subtitulo:
+        dto.textos?.subtitulo ??
+        dto.certificadoPersonalizacao?.textos?.subtitulo ??
+        dto.evento.nome,
+    };
+
+    return {
+      textos,
+      previewPdf: await this.renderCertificateCustomizationPreview(
+        {
+          ...dto,
+          textos,
+        },
+        templateUrl ??
+          dto.templateUrl ??
+          dto.certificadoPersonalizacao?.templateUrl,
+      ),
+    };
+  }
+
+  getDefaultCertificateCustomization(nomeEvento?: string) {
+    return {
+      textos: {
+        ...DEFAULT_CERTIFICATE_TEXTS,
+        subtitulo: nomeEvento?.trim() || DEFAULT_CERTIFICATE_TEXTS.subtitulo,
+      },
+    };
+  }
+
+  async renderCertificateCustomizationPreview(
+    dto: CertificateCustomizationPreviewDto,
+    templateUrl?: string,
+  ) {
+    const issueDate = new Date();
+    const qr = await gerarQrPng(urlVerificacao('PREVIEW-ASSINAE'));
+    const textos = dto.textos ?? dto.certificadoPersonalizacao?.textos;
+
+    return renderParticipantCertificatePdf({
+      certificateId: 0,
+      participantName: 'Nome do participante',
+      role: 'Ouvinte',
+      eventName: dto.evento.nome,
+      workloadHours: dto.evento.cargaHoraria,
+      location: dto.evento.localizacao,
+      eventDate: formatDateRange(
+        parseEventDate(dto.evento.dataInicio),
+        parseEventDate(dto.evento.dataFim),
+      ),
+      issueDate,
+      templateUrl:
+        templateUrl ??
+        dto.templateUrl ??
+        dto.certificadoPersonalizacao?.templateUrl ??
+        dto.template,
+      textos,
+      assinatura: {
+        nome: 'Assinaê',
+        data: issueDate.toLocaleString('pt-BR', {
+          timeZone: 'America/Bahia',
+          dateStyle: 'short',
+          timeStyle: 'short',
+        }),
+        codigo: 'PREVIEW-ASSINAE',
+        qr: qr ? { data: qr, format: 'png' as const } : undefined,
+      },
+    });
+  }
+
   async create(createEventDto: CreateEventDto, userId: number) {
     await this.assertAuthenticatedUserExists(userId);
 
@@ -106,6 +242,10 @@ export class EventService {
           dataFim: parseEventDate(createEventDto.dataFim),
           status: createEventDto.status,
           foto: createEventDto.foto,
+          templateUrl: createEventDto.templateUrl ?? null,
+          certificadoTemplate: createEventDto.certificadoTemplate ?? null,
+          template: createEventDto.template ?? null,
+          ...this.resolveCertificateCustomization(createEventDto),
         })
         .returning();
 
@@ -174,6 +314,8 @@ export class EventService {
           : 'Evento criado com sucesso.',
       data: {
         ...novoEvento,
+        certificadoPersonalizacao:
+          this.formatCertificateCustomization(novoEvento),
         atividades: atividadesCriadas,
         ...(atividadesComErro.length > 0 && { atividadesComErro }),
       },
@@ -286,6 +428,7 @@ export class EventService {
       message: 'Evento encontrado.',
       data: {
         ...evento,
+        certificadoPersonalizacao: this.formatCertificateCustomization(evento),
         atividades: atividadesFormatadas,
         totalInscritos,
       },
@@ -311,10 +454,27 @@ export class EventService {
 
     await assertEventOrganizer(userId, eventoExistente.id);
 
-    const { atividades, dataInicio, dataFim, ...dadosEvento } = updateEventDto;
+    const {
+      atividades,
+      dataInicio,
+      dataFim,
+      certificadoPersonalizacao: certificadoPersonalizacaoRecebida,
+      ...dadosEvento
+    } = updateEventDto;
+    // PartialType deixa o campo aninhado como any; a validação do DTO já ocorreu na entrada.
+    const certificadoPersonalizacao = certificadoPersonalizacaoRecebida;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const hasCustomizationTemplateUrl =
+      certificadoPersonalizacao !== undefined
+        ? Object.prototype.hasOwnProperty.call(
+            certificadoPersonalizacao,
+            'templateUrl',
+          )
+        : false;
 
     const [eventoAtualizado] = await db
       .update(tabelaEvento)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       .set({
         ...dadosEvento,
         ...(dataInicio !== undefined && {
@@ -323,9 +483,35 @@ export class EventService {
         ...(dataFim !== undefined && {
           dataFim: parseEventDate(dataFim),
         }),
+        ...(updateEventDto.templateUrl !== undefined && {
+          templateUrl: updateEventDto.templateUrl ?? null,
+        }),
+        ...(updateEventDto.certificadoTemplate !== undefined && {
+          certificadoTemplate: updateEventDto.certificadoTemplate ?? null,
+        }),
+        ...(updateEventDto.template !== undefined && {
+          template: updateEventDto.template ?? null,
+        }),
+        ...(hasCustomizationTemplateUrl && {
+          templateUrl: certificadoPersonalizacao?.templateUrl ?? null,
+          certificadoTemplate: certificadoPersonalizacao?.templateUrl ?? null,
+          template: certificadoPersonalizacao?.templateUrl ?? null,
+        }),
+        ...(certificadoPersonalizacao !== undefined && {
+          ...this.resolveCertificateCustomization({
+            certificadoPersonalizacao,
+          }),
+        }),
       })
       .where(eq(tabelaEvento.id, id))
       .returning();
+
+    if (
+      eventoExistente.templateUrl &&
+      eventoExistente.templateUrl !== eventoAtualizado?.templateUrl
+    ) {
+      await this.storage.tryRemoveByPublicUrl(eventoExistente.templateUrl);
+    }
 
     if (
       dadosEvento.foto &&
@@ -432,6 +618,8 @@ export class EventService {
           : 'Evento atualizado com sucesso.',
       data: {
         ...eventoAtualizado,
+        certificadoPersonalizacao:
+          this.formatCertificateCustomization(eventoAtualizado),
         atividades: atividadesAtualizadas,
         ...(atividadesComErro.length > 0 && { atividadesComErro }),
       },

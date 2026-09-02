@@ -10,10 +10,12 @@ import {
   UnauthorizedException,
   Query,
   BadRequestException,
-  UploadedFile,
+  UploadedFiles,
   UseInterceptors,
+  Res,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -28,6 +30,7 @@ import type { TipoParticipante } from './event.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
+import { CertificateCustomizationPreviewDto } from './dto/certificate-customization-preview.dto';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 import type { JwtPayload } from 'src/common/types/jwt-payload.type';
 import { User } from 'src/common/decorators/usuario.decorator';
@@ -50,7 +53,12 @@ export class EventController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('foto'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'foto', maxCount: 1 },
+      { name: 'template', maxCount: 1 },
+    ]),
+  )
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateEventDto })
@@ -63,13 +71,21 @@ export class EventController {
   })
   async create(
     @Body() createEventDto: CreateEventDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles()
+    files: {
+      foto?: Express.Multer.File[];
+      template?: Express.Multer.File[];
+    },
     @User() user: JwtPayload,
   ) {
     const userId = Number(user.sub);
     await this.eventService.assertAuthenticatedUserExists(userId);
 
+    const file = files?.foto?.[0];
+    const templateFile = files?.template?.[0];
+
     let uploadedPhotoUrl: string | undefined;
+    let uploadedTemplateUrl: string | undefined;
 
     if (file) {
       uploadedPhotoUrl = await this.storage.uploadMulterFile(
@@ -87,14 +103,161 @@ export class EventController {
       createEventDto.foto = uploadedPhotoUrl;
     }
 
+    if (templateFile) {
+      uploadedTemplateUrl = await this.storage.uploadMulterFile(
+        'Outros',
+        templateFile,
+        userId,
+      );
+      createEventDto.templateUrl = uploadedTemplateUrl;
+      createEventDto.certificadoTemplate = uploadedTemplateUrl;
+      createEventDto.template = uploadedTemplateUrl;
+    } else if (createEventDto.templateUrl?.startsWith('data:')) {
+      uploadedTemplateUrl = await this.storage.uploadDataUrl(
+        'Outros',
+        createEventDto.templateUrl,
+        userId,
+      );
+      createEventDto.templateUrl = uploadedTemplateUrl;
+      createEventDto.certificadoTemplate = uploadedTemplateUrl;
+      createEventDto.template = uploadedTemplateUrl;
+    }
+
     try {
       return await this.eventService.create(createEventDto, userId);
     } catch (error) {
       if (uploadedPhotoUrl) {
         await this.storage.tryRemoveByPublicUrl(uploadedPhotoUrl);
       }
+      if (uploadedTemplateUrl) {
+        await this.storage.tryRemoveByPublicUrl(uploadedTemplateUrl);
+      }
 
       throw error;
+    }
+  }
+
+  @Post('certificate/customization/default')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'template', maxCount: 1 }]))
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary:
+      'Pré-visualizar o certificado padrão do Assinaê para um evento em edição',
+  })
+  async previewDefaultCertificateCustomization(
+    @Body() dto: CertificateCustomizationPreviewDto,
+    @UploadedFiles() files: { template?: Express.Multer.File[] },
+    @User() user: JwtPayload,
+    @Res() res: Response,
+  ) {
+    const userId = Number(user.sub);
+    await this.eventService.assertAuthenticatedUserExists(userId);
+
+    const templateFile = files?.template?.[0];
+    let uploadedTemplateUrl: string | undefined;
+
+    if (templateFile) {
+      uploadedTemplateUrl = await this.storage.uploadMulterFile(
+        'Outros',
+        templateFile,
+        userId,
+      );
+    }
+
+    try {
+      const { textos, previewPdf } =
+        await this.eventService.previewDefaultCertificateCustomization(
+          dto,
+          uploadedTemplateUrl ??
+            dto.templateUrl ??
+            dto.certificadoPersonalizacao?.templateUrl,
+        );
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        'inline; filename="certificado-preview-padrao.pdf"',
+      );
+      res.setHeader(
+        'X-Certificate-Default-Texts',
+        encodeURIComponent(JSON.stringify(textos)),
+      );
+      res.setHeader('Content-Length', previewPdf.length);
+      res.send(previewPdf);
+    } finally {
+      if (uploadedTemplateUrl) {
+        await this.storage.tryRemoveByPublicUrl(uploadedTemplateUrl);
+      }
+    }
+  }
+
+  @Get('certificate/customization/default-texts')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Retorna os textos padrão para preencher a personalização',
+  })
+  @ApiQuery({
+    name: 'nomeEvento',
+    required: false,
+    type: String,
+    description: 'Nome do evento usado como subtítulo padrão.',
+  })
+  getDefaultCertificateCustomization(@Query('nomeEvento') nomeEvento?: string) {
+    return this.eventService.getDefaultCertificateCustomization(nomeEvento);
+  }
+
+  @Post('certificate/customization/preview')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'template', maxCount: 1 }]))
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary:
+      'Gerar PDF de pré-visualização com a personalização atual do certificado',
+  })
+  async previewCertificateCustomization(
+    @Body() dto: CertificateCustomizationPreviewDto,
+    @UploadedFiles() files: { template?: Express.Multer.File[] },
+    @User() user: JwtPayload,
+    @Res() res: Response,
+  ) {
+    const userId = Number(user.sub);
+    await this.eventService.assertAuthenticatedUserExists(userId);
+
+    const templateFile = files?.template?.[0];
+    let uploadedTemplateUrl: string | undefined;
+
+    if (templateFile) {
+      uploadedTemplateUrl = await this.storage.uploadMulterFile(
+        'Outros',
+        templateFile,
+        userId,
+      );
+    }
+
+    try {
+      const previewPdf =
+        await this.eventService.renderCertificateCustomizationPreview(
+          dto,
+          uploadedTemplateUrl ??
+            dto.templateUrl ??
+            dto.certificadoPersonalizacao?.templateUrl,
+        );
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        'inline; filename="certificado-preview.pdf"',
+      );
+      res.setHeader('Content-Length', previewPdf.length);
+      res.send(previewPdf);
+    } finally {
+      if (uploadedTemplateUrl) {
+        await this.storage.tryRemoveByPublicUrl(uploadedTemplateUrl);
+      }
     }
   }
 
@@ -162,7 +325,12 @@ export class EventController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('foto'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'foto', maxCount: 1 },
+      { name: 'template', maxCount: 1 },
+    ]),
+  )
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UpdateEventDto })
@@ -177,13 +345,21 @@ export class EventController {
   async update(
     @Param('id') id: string,
     @Body() updateEventDto: UpdateEventDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles()
+    files: {
+      foto?: Express.Multer.File[];
+      template?: Express.Multer.File[];
+    },
     @User() user: JwtPayload,
   ) {
     const userId = Number(user.sub);
     await this.eventService.assertAuthenticatedUserExists(userId);
 
+    const file = files?.foto?.[0];
+    const templateFile = files?.template?.[0];
+
     let uploadedPhotoUrl: string | undefined;
+    let uploadedTemplateUrl: string | undefined;
 
     if (file) {
       uploadedPhotoUrl = await this.storage.uploadMulterFile(
@@ -201,11 +377,34 @@ export class EventController {
       updateEventDto.foto = uploadedPhotoUrl;
     }
 
+    if (templateFile) {
+      uploadedTemplateUrl = await this.storage.uploadMulterFile(
+        'Outros',
+        templateFile,
+        id,
+      );
+      updateEventDto.templateUrl = uploadedTemplateUrl;
+      updateEventDto.certificadoTemplate = uploadedTemplateUrl;
+      updateEventDto.template = uploadedTemplateUrl;
+    } else if (updateEventDto.templateUrl?.startsWith('data:')) {
+      uploadedTemplateUrl = await this.storage.uploadDataUrl(
+        'Outros',
+        updateEventDto.templateUrl,
+        id,
+      );
+      updateEventDto.templateUrl = uploadedTemplateUrl;
+      updateEventDto.certificadoTemplate = uploadedTemplateUrl;
+      updateEventDto.template = uploadedTemplateUrl;
+    }
+
     try {
       return await this.eventService.update(+id, updateEventDto, userId);
     } catch (error) {
       if (uploadedPhotoUrl) {
         await this.storage.tryRemoveByPublicUrl(uploadedPhotoUrl);
+      }
+      if (uploadedTemplateUrl) {
+        await this.storage.tryRemoveByPublicUrl(uploadedTemplateUrl);
       }
 
       throw error;

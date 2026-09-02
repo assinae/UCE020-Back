@@ -3,10 +3,8 @@ import { Document, Page, Text, View, Image, pdf } from '@react-pdf/renderer';
 import { streamToBuffer } from './stream-to-buffer';
 import { certificateStyles as styles } from './certificate.styles';
 import { formatDate } from './format-date-range';
-import {
-  LOGO_ASSINAE_SRC,
-  LOGO_UEFS_SRC,
-} from 'src/resources/certificatesConfig/certificate.assets';
+import { LOGO_ASSINAE_SRC } from 'src/resources/certificatesConfig/certificate.assets';
+import { shouldRenderDefaultBranding } from './certificate-template';
 
 export type GuestCertificateData = {
   certificateId: number;
@@ -22,6 +20,7 @@ export type GuestCertificateData = {
   assinante1Titulo?: string;
   assinante2Nome?: string;
   assinante2Titulo?: string;
+  templateUrl?: string | null;
   // Dados da assinatura digital (preenchidos no ato da assinatura).
   assinatura?: {
     nome: string;
@@ -48,6 +47,172 @@ function buildDocument(data: GuestCertificateData) {
   const certTitle =
     GUEST_CERT_TITLE[data.role] ?? 'CERTIFICADO DE PARTICIPAÇÃO';
   const roleVerb = GUEST_ROLE_VERB[data.role] ?? 'participou da atividade';
+  const renderDefaultBranding = shouldRenderDefaultBranding(data.templateUrl);
+  const hasTemplate = !renderDefaultBranding;
+  const templateSrc =
+    hasTemplate && data.templateUrl ? data.templateUrl.trim() : null;
+
+  if (hasTemplate && templateSrc) {
+    return e(
+      Document,
+      {},
+      e(
+        Page,
+        {
+          size: 'A4',
+          orientation: 'landscape',
+          style: styles.page,
+        },
+        e(Image, {
+          src: templateSrc,
+          style: styles.templateBackground,
+        }),
+        e(
+          View,
+          { style: styles.templateContent },
+          e(
+            View,
+            { style: styles.templateBodySection },
+            e(Text, { style: styles.templateCertTypeLabel }, certTitle),
+            e(Text, { style: styles.templateEventName }, data.eventName),
+            e(
+              Text,
+              { style: styles.templateCertificamosQue },
+              'Certificamos que',
+            ),
+            e(Text, { style: styles.templateParticipantName }, data.guestName),
+            e(
+              Text,
+              { style: styles.templateDescriptionText },
+              `${roleVerb} `,
+              e(
+                Text,
+                { style: { fontWeight: 700, color: '#0F1D35' } },
+                `"${data.activityName}"`,
+              ),
+              ', parte do evento ',
+              e(
+                Text,
+                { style: { fontWeight: 700, color: '#0F1D35' } },
+                `"${data.eventName}"`,
+              ),
+              data.workloadHours ? ', com carga horária de ' : '.',
+            ),
+            ...(data.workloadHours
+              ? [
+                  e(
+                    Text,
+                    {
+                      style: styles.templateDescriptionText,
+                    },
+                    e(
+                      Text,
+                      {
+                        style: {
+                          fontWeight: 700,
+                          color: '#0F1D35',
+                        },
+                      },
+                      `${data.workloadHours} hora(s)`,
+                    ),
+                    '.',
+                  ),
+                ]
+              : []),
+            e(
+              View,
+              { style: styles.templateDetailsRow },
+              e(
+                View,
+                { style: styles.templateDetailBlock },
+                e(Text, { style: styles.templateDetailLabel }, 'Período'),
+                e(Text, { style: styles.templateDetailValue }, data.eventDate),
+              ),
+              ...(data.workloadHours
+                ? [
+                    e(
+                      View,
+                      { style: styles.templateDetailBlock },
+                      e(
+                        Text,
+                        { style: styles.templateDetailLabel },
+                        'Carga Horária',
+                      ),
+                      e(
+                        Text,
+                        { style: styles.templateDetailValue },
+                        `${data.workloadHours}h`,
+                      ),
+                    ),
+                  ]
+                : []),
+            ),
+          ),
+        ),
+        e(
+          View,
+          { style: styles.templateSignatureArea },
+          data.assinatura
+            ? e(
+                View,
+                { style: styles.signatureStamp },
+                data.assinatura.qr
+                  ? e(
+                      View,
+                      { style: styles.signatureQrWrapper },
+                      e(Image, {
+                        src: data.assinatura.qr,
+                        style: styles.signatureQr,
+                      }),
+                      e(
+                        View,
+                        { style: styles.signatureQrLogoBackground },
+                        e(Image, {
+                          src: LOGO_ASSINAE_SRC,
+                          style: styles.signatureQrLogo,
+                        }),
+                      ),
+                    )
+                  : null,
+                e(
+                  View,
+                  { style: styles.signatureInfo },
+                  e(
+                    Text,
+                    { style: styles.signatureLabel },
+                    'Assinado digitalmente por',
+                  ),
+                  e(
+                    Text,
+                    { style: styles.signatureName },
+                    data.assinatura.nome,
+                  ),
+                  e(
+                    Text,
+                    { style: styles.signatureDate },
+                    `em ${data.assinatura.data}`,
+                  ),
+                  e(
+                    Text,
+                    { style: styles.signatureCode },
+                    `Código de verificação: ${data.assinatura.codigo}`,
+                  ),
+                ),
+              )
+            : null,
+        ),
+        e(
+          View,
+          { style: styles.templateFooterSection },
+          e(
+            Text,
+            { style: styles.templateFooterCenter },
+            `Emitido em ${formatDate(data.issueDate)}`,
+          ),
+        ),
+      ),
+    );
+  }
 
   return e(
     Document,
@@ -64,14 +229,18 @@ function buildDocument(data: GuestCertificateData) {
 
       e(
         View,
-        { style: styles.content },
+        {
+          style: styles.content,
+        },
 
         // Logo
-        e(
-          View,
-          { style: styles.headerSection },
-          e(Image, { src: LOGO_ASSINAE_SRC, style: styles.logo }),
-        ),
+        renderDefaultBranding
+          ? e(
+              View,
+              { style: styles.headerSection },
+              e(Image, { src: LOGO_ASSINAE_SRC, style: styles.logo }),
+            )
+          : null,
 
         // Tipo + nome do evento
         e(
@@ -122,13 +291,6 @@ function buildDocument(data: GuestCertificateData) {
             e(
               View,
               { style: styles.detailBlock },
-              e(Text, { style: styles.detailLabel }, 'Local'),
-              e(Text, { style: styles.detailValue }, data.location),
-            ),
-            e(View, { style: styles.detailSeparator }),
-            e(
-              View,
-              { style: styles.detailBlock },
               e(Text, { style: styles.detailLabel }, 'Período'),
               e(Text, { style: styles.detailValue }, data.eventDate),
             ),
@@ -159,18 +321,26 @@ function buildDocument(data: GuestCertificateData) {
                 View,
                 { style: styles.signatureStamp },
                 data.assinatura.qr
-                  ? e(Image, {
-                      src: data.assinatura.qr,
-                      style: styles.signatureQr,
-                    })
+                  ? e(
+                      View,
+                      { style: styles.signatureQrWrapper },
+                      e(Image, {
+                        src: data.assinatura.qr,
+                        style: styles.signatureQr,
+                      }),
+                      e(
+                        View,
+                        { style: styles.signatureQrLogoBackground },
+                        e(Image, {
+                          src: LOGO_ASSINAE_SRC,
+                          style: styles.signatureQrLogo,
+                        }),
+                      ),
+                    )
                   : null,
                 e(
                   View,
                   { style: styles.signatureInfo },
-                  e(Image, {
-                    src: LOGO_ASSINAE_SRC,
-                    style: styles.signatureLogo,
-                  }),
                   e(
                     Text,
                     { style: styles.signatureLabel },
@@ -196,32 +366,14 @@ function buildDocument(data: GuestCertificateData) {
             : null,
         ),
 
-        // Apoio (fixa) — logo UEFS
-        e(
-          View,
-          { style: styles.apoioSection },
-          e(Text, { style: styles.apoioLabel }, 'Apoio:'),
-          e(Image, { src: LOGO_UEFS_SRC, style: styles.apoioLogo }),
-        ),
-
         // Rodapé
         e(
           View,
           { style: styles.footerSection },
           e(
             Text,
-            { style: styles.footerLeft },
+            { style: { ...styles.footerCenter, flex: 1 } },
             `Emitido em ${formatDate(data.issueDate)}`,
-          ),
-          e(
-            Text,
-            { style: styles.footerCenter },
-            'Universidade Estadual de Feira de Santana — UEFS',
-          ),
-          e(
-            Text,
-            { style: styles.footerRight },
-            `Certificado nº ${data.certificateId}`,
           ),
         ),
       ),

@@ -1,6 +1,6 @@
 import { StyleSheet } from '@react-pdf/renderer';
-import { Font }       from '@react-pdf/renderer';
-import { join }       from 'path';
+import { Font } from '@react-pdf/renderer';
+import { join } from 'path';
 
 /**
  * Relativo a __dirname, não ao cwd: o nest-cli.json copia os .ttf para
@@ -25,17 +25,161 @@ Font.register({
     {
       src: join(FONTS_DIR, 'Poppins-Italic.ttf'),
       fontWeight: 400,
-      fontStyle: 'italic'
+      fontStyle: 'italic',
     },
   ],
 });
 
 export const certificateStyles = StyleSheet.create({
-
   page: {
+    position: 'relative',
     padding: 0,
     fontFamily: 'Poppins',
     backgroundColor: '#ffffff',
+  },
+
+  templateBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 841.89,
+    height: 595,
+    objectFit: 'cover',
+  },
+
+  templateContent: {
+    position: 'absolute',
+    top: 255,
+    left: 64,
+    right: 64,
+    height: 250,
+    alignItems: 'center',
+  },
+
+  templateCertTypeLabel: {
+    fontSize: 10,
+    fontWeight: 700,
+    color: '#24134B',
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+
+  templateBodySection: {
+    alignItems: 'center',
+    width: '100%',
+  },
+
+  templateEventName: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: '#24134B',
+    textAlign: 'center',
+    marginBottom: 18,
+    lineHeight: 1.2,
+  },
+
+  templateCertificamosQue: {
+    fontSize: 10,
+    fontWeight: 700,
+    color: '#64748B',
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+
+  templateParticipantName: {
+    fontSize: 20,
+    fontWeight: 700,
+    color: '#0F1D35',
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 1.15,
+  },
+
+  templateDescriptionText: {
+    fontSize: 10,
+    fontWeight: 400,
+    color: '#475467',
+    textAlign: 'center',
+    lineHeight: 1.45,
+    maxWidth: 540,
+  },
+
+  templateDetailsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    marginTop: 14,
+    gap: 20,
+  },
+
+  templateDetailBlock: {
+    alignItems: 'center',
+    minWidth: 70,
+  },
+
+  templateDetailLabel: {
+    fontSize: 7.5,
+    fontWeight: 700,
+    color: '#64748B',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+
+  templateDetailValue: {
+    fontSize: 8.5,
+    fontWeight: 700,
+    color: '#0F1D35',
+    textAlign: 'center',
+  },
+
+  templateSignatureArea: {
+    position: 'absolute',
+    left: '50%',
+    bottom: 28,
+    width: 200,
+    height: 70,
+    marginLeft: -125,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  templateFooterSection: {
+    position: 'absolute',
+    left: 64,
+    right: 64,
+    bottom: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  templateFooterLeft: {
+    flex: 1,
+    textAlign: 'left',
+    fontSize: 5,
+    fontWeight: 400,
+    color: '#64748B',
+  },
+
+  templateFooterCenter: {
+    flex: 1.5,
+    textAlign: 'center',
+    fontSize: 5,
+    fontWeight: 400,
+    color: '#64748B',
+  },
+
+  templateFooterRight: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 5,
+    fontWeight: 400,
+    color: '#64748B',
   },
 
   // Borda externa com cantos decorativos — linha verde
@@ -101,7 +245,12 @@ export const certificateStyles = StyleSheet.create({
 
   // Container principal
   content: {
-    flexGrow: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
     paddingHorizontal: 64,
     paddingTop: 32,
     paddingBottom: 28,
@@ -190,7 +339,7 @@ export const certificateStyles = StyleSheet.create({
     color: '#0F1D35',
   },
 
-  // Linha de detalhes — local, período, carga horária
+  // Linha de detalhes — período e carga horária
   detailsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -230,7 +379,7 @@ export const certificateStyles = StyleSheet.create({
   // Quando o certificado é assinado, o bloco abaixo é renderizado centralizado.
   signatureArea: {
     width: '100%',
-    height: 96,
+    height: 60,
     marginTop: 28,
     alignItems: 'center',
     justifyContent: 'center',
@@ -241,24 +390,44 @@ export const certificateStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 14,
+    gap: 6,
+    height: 60,
+  },
+
+  signatureQrWrapper: {
+    position: 'relative',
+    width: 60,
+    height: 60,
   },
 
   signatureQr: {
-    width: 64,
-    height: 64,
+    width: 60,
+    height: 60,
+    objectFit: 'contain',
+  },
+
+  signatureQrLogoBackground: {
+    position: 'absolute',
+    left: 20,
+    top: 20,
+    width: 20,
+    height: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: '2px',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  signatureQrLogo: {
+    width: 18,
+    height: 18,
     objectFit: 'contain',
   },
 
   signatureInfo: {
+    height: 60,
     alignItems: 'flex-start',
-  },
-
-  signatureLogo: {
-    width: 82,
-    height: 26,
-    objectFit: 'contain',
-    marginBottom: 3,
+    justifyContent: 'center',
   },
 
   signatureLabel: {

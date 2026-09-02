@@ -290,10 +290,16 @@ export class CertificateService {
     activityTitle: string;
     activityHours: number | null;
     arquivoPdf: string | null;
+    assinado: boolean;
+    assinadoEm: Date | null;
+    assinaturaNome: string | null;
+    codigoVerificacao: string | null;
+    hashVerificacao: string | null;
     kind: 'user' | 'guest' | 'activity';
   }) {
     return {
       id: `${row.kind}-${row.id}`,
+      certificadoId: row.id,
       title: row.activityTitle,
       participantName: row.participantName,
       participantEmail: row.participantEmail,
@@ -305,6 +311,11 @@ export class CertificateService {
       location: row.location,
       issueDate: formatBahiaDate(row.dataEmissao),
       imageUrl: row.arquivoPdf ?? undefined,
+      status: row.assinado ? 'Assinado' : 'Pendente',
+      assinadoEm: row.assinadoEm ? formatBahiaDate(row.assinadoEm) : null,
+      assinadoPor: row.assinaturaNome,
+      codigoVerificacao: row.codigoVerificacao,
+      hash: row.hashVerificacao,
     };
   }
 
