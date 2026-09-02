@@ -75,6 +75,14 @@ export const tabelaEvento = pgTable('evento', {
   dataFim: timestamp('dataFim', { withTimezone: true }).notNull(),
   status: statusEnum('status').notNull(),
   foto: text('foto'), //url
+  templateUrl: text('template_url'),
+  certificadoTemplate: text('certificado_template'),
+  template: text('template'),
+  certificadoTitulo: text('certificado_titulo'),
+  certificadoSubtitulo: text('certificado_subtitulo'),
+  certificadoDescricaoInicio: text('certificado_descricao_inicio'),
+  certificadoDescricaoEvento: text('certificado_descricao_evento'),
+  certificadoDescricaoCargaHoraria: text('certificado_descricao_carga_horaria'),
   assinante1Nome: text('assinante1_nome'),
   assinante1Titulo: text('assinante1_titulo'),
   assinante2Nome: text('assinante2_nome'),
@@ -138,16 +146,19 @@ export const tabelaParticipacoes = pgTable('participacao', {
 });
 
 //Tabela de participacoes e atividades
-export const tabelaParticipacoesAtividades = pgTable('participacoes_atividades', {
-  participacaoId: integer('participacao_id')
-    .notNull()
-    .references(() => tabelaParticipacoes.id, { onDelete: 'cascade' }),
-  atividadeId: integer('atividade_id')
-    .notNull()
-    .references(() => tabelaAtividade.id, { onDelete: 'cascade' }),
-  presente: boolean('presente').notNull().default(false),
-  dataPresenca: timestamp('data_presenca', { withTimezone: true }),
-});
+export const tabelaParticipacoesAtividades = pgTable(
+  'participacoes_atividades',
+  {
+    participacaoId: integer('participacao_id')
+      .notNull()
+      .references(() => tabelaParticipacoes.id, { onDelete: 'cascade' }),
+    atividadeId: integer('atividade_id')
+      .notNull()
+      .references(() => tabelaAtividade.id, { onDelete: 'cascade' }),
+    presente: boolean('presente').notNull().default(false),
+    dataPresenca: timestamp('data_presenca', { withTimezone: true }),
+  },
+);
 
 //Tabela de certificado dos participantes
 export const tabelaCertificadoEvento = pgTable('certificado_evento', {

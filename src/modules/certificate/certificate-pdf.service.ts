@@ -16,6 +16,7 @@ import {
   formatarDataHoraAssinatura,
   urlVerificacao,
 } from './signature/signature-format';
+import { resolveCertificateTemplateUrl } from './pdf/certificate-template';
 
 interface EstadoAssinatura {
   assinado: boolean;
@@ -106,6 +107,18 @@ export class CertificatePdfService {
       assinante1Titulo: cert.assinante1Titulo ?? undefined,
       assinante2Nome: cert.assinante2Nome ?? undefined,
       assinante2Titulo: cert.assinante2Titulo ?? undefined,
+      templateUrl: resolveCertificateTemplateUrl({
+        templateUrl: cert.templateUrl,
+        certificadoTemplate: cert.certificadoTemplate,
+        template: cert.template,
+      }),
+      textos: {
+        titulo: cert.certificadoTitulo,
+        subtitulo: cert.certificadoSubtitulo,
+        descricaoInicio: cert.certificadoDescricaoInicio,
+        descricaoEvento: cert.certificadoDescricaoEvento,
+        descricaoCargaHoraria: cert.certificadoDescricaoCargaHoraria,
+      },
     };
 
     const etag = this.calcularEtag('user', dados, cert);
@@ -149,6 +162,11 @@ export class CertificatePdfService {
       assinante1Titulo: cert.assinante1Titulo ?? undefined,
       assinante2Nome: cert.assinante2Nome ?? undefined,
       assinante2Titulo: cert.assinante2Titulo ?? undefined,
+      templateUrl: resolveCertificateTemplateUrl({
+        templateUrl: cert.templateUrl,
+        certificadoTemplate: cert.certificadoTemplate,
+        template: cert.template,
+      }),
     };
 
     const etag = this.calcularEtag('guest', dados, cert);
@@ -196,6 +214,11 @@ export class CertificatePdfService {
       assinante1Titulo: cert.assinante1Titulo ?? undefined,
       assinante2Nome: cert.assinante2Nome ?? undefined,
       assinante2Titulo: cert.assinante2Titulo ?? undefined,
+      templateUrl: resolveCertificateTemplateUrl({
+        templateUrl: cert.templateUrl,
+        certificadoTemplate: cert.certificadoTemplate,
+        template: cert.template,
+      }),
     };
 
     const etag = this.calcularEtag('activity', dados, cert);
