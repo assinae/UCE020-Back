@@ -28,17 +28,22 @@ export class CertificateMeController {
 
   @Get('me')
   @ApiOperation({
-    summary: 'Lista todos os certificados do usuário logado, de todos os eventos',
+    summary:
+      'Lista todos os certificados do usuário logado, de todos os eventos',
   })
   @ApiOkResponse({ description: 'Lista de certificados do usuário' })
   @ApiUnauthorizedResponse({ description: 'Token ausente ou inválido' })
-  @ApiQuery({ name: 'page',  required: false, type: Number, example: 1  })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 100 })
   getMyCertificates(
     @Req() req: RequestWithUser,
-    @Query('page',  new ParseIntPipe({ optional: true })) page  = 1,
+    @Query('page', new ParseIntPipe({ optional: true })) page = 1,
     @Query('limit', new ParseIntPipe({ optional: true })) limit = 100,
   ) {
-    return this.certificateService.getCertificatesByUser(req.user.sub, page, limit);
+    return this.certificateService.getCertificatesByUser(
+      req.user.sub,
+      page,
+      limit,
+    );
   }
 }

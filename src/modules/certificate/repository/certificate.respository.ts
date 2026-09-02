@@ -175,6 +175,11 @@ export class CertificateRepository {
         activityTitle: tabelaEvento.nome,
         activityHours: tabelaEvento.cargaHoraria,
         arquivoPdf: tabelaCertificadoEvento.arquivoPdf,
+        assinado: tabelaCertificadoEvento.assinado,
+        assinadoEm: tabelaCertificadoEvento.assinadoEm,
+        assinaturaNome: tabelaCertificadoEvento.assinaturaNome,
+        codigoVerificacao: tabelaCertificadoEvento.codigoVerificacao,
+        hashVerificacao: tabelaCertificadoEvento.hashVerificacao,
       })
       .from(tabelaCertificadoEvento)
       .innerJoin(
@@ -207,6 +212,11 @@ export class CertificateRepository {
         activityTitle: tabelaAtividade.nome,
         activityHours: tabelaAtividade.cargaHoraria,
         arquivoPdf: tabelaCertificadoConvidado.arquivoPdf,
+        assinado: tabelaCertificadoConvidado.assinado,
+        assinadoEm: tabelaCertificadoConvidado.assinadoEm,
+        assinaturaNome: tabelaCertificadoConvidado.assinaturaNome,
+        codigoVerificacao: tabelaCertificadoConvidado.codigoVerificacao,
+        hashVerificacao: tabelaCertificadoConvidado.hashVerificacao,
       })
       .from(tabelaCertificadoConvidado)
       .innerJoin(
@@ -245,6 +255,11 @@ export class CertificateRepository {
         activityTitle: tabelaAtividade.nome,
         activityHours: tabelaAtividade.cargaHoraria,
         arquivoPdf: tabelaCertificadoAtividade.arquivoPdf,
+        assinado: tabelaCertificadoAtividade.assinado,
+        assinadoEm: tabelaCertificadoAtividade.assinadoEm,
+        assinaturaNome: tabelaCertificadoAtividade.assinaturaNome,
+        codigoVerificacao: tabelaCertificadoAtividade.codigoVerificacao,
+        hashVerificacao: tabelaCertificadoAtividade.hashVerificacao,
       })
       .from(tabelaCertificadoAtividade)
       .innerJoin(
