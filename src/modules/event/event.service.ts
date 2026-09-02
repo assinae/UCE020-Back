@@ -35,6 +35,15 @@ const DEFAULT_CERTIFICATE_TEXTS = {
   descricaoCargaHoraria: ' pela participação.',
 };
 
+type CertificateCustomizationRecord = {
+  templateUrl?: string | null;
+  certificadoTitulo?: string | null;
+  certificadoSubtitulo?: string | null;
+  certificadoDescricaoInicio?: string | null;
+  certificadoDescricaoEvento?: string | null;
+  certificadoDescricaoCargaHoraria?: string | null;
+};
+
 @Injectable()
 export class EventService {
   constructor(
@@ -110,6 +119,30 @@ export class EventService {
       certificadoDescricaoEvento: textos?.descricaoEvento?.trim() || null,
       certificadoDescricaoCargaHoraria:
         textos?.descricaoCargaHoraria?.trim() || null,
+    };
+  }
+
+  private formatCertificateCustomization(
+    evento: CertificateCustomizationRecord & { nome: string },
+  ) {
+    return {
+      templateUrl: evento.templateUrl ?? null,
+      textos: {
+        titulo: evento.certificadoTitulo ?? DEFAULT_CERTIFICATE_TEXTS.titulo,
+        subtitulo:
+          (evento.certificadoSubtitulo ??
+            DEFAULT_CERTIFICATE_TEXTS.subtitulo) ||
+          evento.nome,
+        descricaoInicio:
+          evento.certificadoDescricaoInicio ??
+          DEFAULT_CERTIFICATE_TEXTS.descricaoInicio,
+        descricaoEvento:
+          evento.certificadoDescricaoEvento ??
+          DEFAULT_CERTIFICATE_TEXTS.descricaoEvento,
+        descricaoCargaHoraria:
+          evento.certificadoDescricaoCargaHoraria ??
+          DEFAULT_CERTIFICATE_TEXTS.descricaoCargaHoraria,
+      },
     };
   }
 
@@ -272,6 +305,8 @@ export class EventService {
           : 'Evento criado com sucesso.',
       data: {
         ...novoEvento,
+        certificadoPersonalizacao:
+          this.formatCertificateCustomization(novoEvento),
         atividades: atividadesCriadas,
         ...(atividadesComErro.length > 0 && { atividadesComErro }),
       },
@@ -384,16 +419,7 @@ export class EventService {
       message: 'Evento encontrado.',
       data: {
         ...evento,
-        certificadoPersonalizacao: {
-          templateUrl: evento.templateUrl,
-          textos: {
-            titulo: evento.certificadoTitulo,
-            subtitulo: evento.certificadoSubtitulo,
-            descricaoInicio: evento.certificadoDescricaoInicio,
-            descricaoEvento: evento.certificadoDescricaoEvento,
-            descricaoCargaHoraria: evento.certificadoDescricaoCargaHoraria,
-          },
-        },
+        certificadoPersonalizacao: this.formatCertificateCustomization(evento),
         atividades: atividadesFormatadas,
         totalInscritos,
       },
@@ -583,6 +609,8 @@ export class EventService {
           : 'Evento atualizado com sucesso.',
       data: {
         ...eventoAtualizado,
+        certificadoPersonalizacao:
+          this.formatCertificateCustomization(eventoAtualizado),
         atividades: atividadesAtualizadas,
         ...(atividadesComErro.length > 0 && { atividadesComErro }),
       },
