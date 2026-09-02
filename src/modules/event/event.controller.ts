@@ -193,6 +193,22 @@ export class EventController {
     }
   }
 
+  @Get('certificate/customization/default-texts')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Retorna os textos padrão para preencher a personalização',
+  })
+  @ApiQuery({
+    name: 'nomeEvento',
+    required: false,
+    type: String,
+    description: 'Nome do evento usado como subtítulo padrão.',
+  })
+  getDefaultCertificateCustomization(@Query('nomeEvento') nomeEvento?: string) {
+    return this.eventService.getDefaultCertificateCustomization(nomeEvento);
+  }
+
   @Post('certificate/customization/preview')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileFieldsInterceptor([{ name: 'template', maxCount: 1 }]))

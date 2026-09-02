@@ -173,6 +173,15 @@ export class EventService {
     };
   }
 
+  getDefaultCertificateCustomization(nomeEvento?: string) {
+    return {
+      textos: {
+        ...DEFAULT_CERTIFICATE_TEXTS,
+        subtitulo: nomeEvento?.trim() || DEFAULT_CERTIFICATE_TEXTS.subtitulo,
+      },
+    };
+  }
+
   async renderCertificateCustomizationPreview(
     dto: CertificateCustomizationPreviewDto,
     templateUrl?: string,
