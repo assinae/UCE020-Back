@@ -154,27 +154,27 @@ function buildDocument(data: ParticipantCertificateData) {
               e(
                 View,
                 { style: styles.templateDetailBlock },
+                e(Text, { style: styles.templateDetailLabel }, 'Atuação'),
+                e(Text, { style: styles.templateDetailValue }, data.role),
+              ),
+              e(View, { style: styles.templateDetailSeparator }),
+              e(
+                View,
+                { style: styles.templateDetailBlock },
                 e(Text, { style: styles.templateDetailLabel }, 'Período'),
                 e(Text, { style: styles.templateDetailValue }, data.eventDate),
               ),
-              ...(data.workloadHours
-                ? [
-                    e(
-                      View,
-                      { style: styles.templateDetailBlock },
-                      e(
-                        Text,
-                        { style: styles.templateDetailLabel },
-                        'Carga Horária',
-                      ),
-                      e(
-                        Text,
-                        { style: styles.templateDetailValue },
-                        `${data.workloadHours}h`,
-                      ),
-                    ),
-                  ]
-                : []),
+              e(View, { style: styles.templateDetailSeparator }),
+              e(
+                View,
+                { style: styles.templateDetailBlock },
+                e(Text, { style: styles.templateDetailLabel }, 'Carga Horária'),
+                e(
+                  Text,
+                  { style: styles.templateDetailValue },
+                  data.workloadHours != null ? `${data.workloadHours}h` : '-',
+                ),
+              ),
             ),
           ),
         ),
@@ -310,24 +310,27 @@ function buildDocument(data: ParticipantCertificateData) {
             e(
               View,
               { style: styles.detailBlock },
+              e(Text, { style: styles.detailLabel }, 'Atuação'),
+              e(Text, { style: styles.detailValue }, data.role),
+            ),
+            e(View, { style: styles.detailSeparator }),
+            e(
+              View,
+              { style: styles.detailBlock },
               e(Text, { style: styles.detailLabel }, 'Período'),
               e(Text, { style: styles.detailValue }, data.eventDate),
             ),
-            ...(data.workloadHours
-              ? [
-                  e(View, { style: styles.detailSeparator }),
-                  e(
-                    View,
-                    { style: styles.detailBlock },
-                    e(Text, { style: styles.detailLabel }, 'Carga Horária'),
-                    e(
-                      Text,
-                      { style: styles.detailValue },
-                      `${data.workloadHours}h`,
-                    ),
-                  ),
-                ]
-              : []),
+            e(View, { style: styles.detailSeparator }),
+            e(
+              View,
+              { style: styles.detailBlock },
+              e(Text, { style: styles.detailLabel }, 'Carga Horária'),
+              e(
+                Text,
+                { style: styles.detailValue },
+                data.workloadHours != null ? `${data.workloadHours}h` : '-',
+              ),
+            ),
           ),
         ),
 

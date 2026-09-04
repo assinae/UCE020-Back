@@ -110,15 +110,24 @@ export const certificateStyles = StyleSheet.create({
 
   templateDetailsRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 14,
-    gap: 20,
+    width: '65%',
+    marginTop: 10,
+    gap: 2,
   },
 
   templateDetailBlock: {
     alignItems: 'center',
+    flex: 1,
     minWidth: 70,
+  },
+
+  templateDetailSeparator: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#CBD5E1',
+    marginHorizontal: 2,
   },
 
   templateDetailLabel: {
@@ -344,12 +353,14 @@ export const certificateStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    width: '65%',
     marginTop: 10,
-    gap: 8,
+    gap: 2,
   },
 
   detailBlock: {
     alignItems: 'center',
+    flex: 1,
   },
 
   detailLabel: {
