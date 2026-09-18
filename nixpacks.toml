@@ -6,4 +6,4 @@ cmd = "npm run start:prod"
 
 [variables]
 NODE_ENV = "production"
-NODE_OPTIONS = "--max-old-space-size=384"
+NODE_OPTIONS = "--max-old-space-size=416"
