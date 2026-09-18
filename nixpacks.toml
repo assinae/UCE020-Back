@@ -1,0 +1,9 @@
+[phases.build]
+cmds = ["npm run build", "npm prune --omit=dev", "npm cache clean --force"]
+
+[start]
+cmd = "npm run start:prod"
+
+[variables]
+NODE_ENV = "production"
+NODE_OPTIONS = "--max-old-space-size=384"
