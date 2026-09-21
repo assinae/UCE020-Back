@@ -17,6 +17,10 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CertificateCustomizationPreviewDto } from './dto/certificate-customization-preview.dto';
 import { ActivityService } from '../activity/activity.service';
+import {
+  findGuestIdsByActivities,
+  removeOrphanGuests,
+} from '../activity/helpers/activity-guests.helper';
 import { assertEventOrganizer } from 'src/common/helpers/assert-event-organizer.helper';
 import { SupabaseStorageService } from 'src/common/storage/supabase-storage.service';
 import { parseEventDate } from 'src/common/helpers/parse-event-date.helper';
@@ -580,16 +584,38 @@ export class EventService {
             });
             atividadesAtualizadas.push(resultado.data.activity);
           } else {
+            const {
+              name,
+              description,
+              location,
+              category,
+              startDate,
+              endDate,
+            } = atividadeDto;
+
+            if (
+              !name ||
+              !description ||
+              !location ||
+              !category ||
+              !startDate ||
+              !endDate
+            ) {
+              throw new BadRequestException(
+                'Informe nome, descrição, local, categoria e datas para criar a atividade.',
+              );
+            }
+
             const resultado = await this.activityService.create({
               dto: {
                 eventId: id,
-                name: atividadeDto.name,
-                description: atividadeDto.description,
-                location: atividadeDto.location,
-                category: atividadeDto.category,
+                name,
+                description,
+                location,
+                category,
                 workload: atividadeDto.workload,
-                startDate: atividadeDto.startDate,
-                endDate: atividadeDto.endDate,
+                startDate,
+                endDate,
                 foto: preparedPhoto.foto,
                 guests: atividadeDto.guests,
                 generateCertificate: atividadeDto.generateCertificate,
@@ -697,12 +723,23 @@ export class EventService {
       );
     }
 
-    const activityPhotos = await db
-      .select({ foto: tabelaAtividade.foto })
+    const activities = await db
+      .select({ id: tabelaAtividade.id, foto: tabelaAtividade.foto })
       .from(tabelaAtividade)
       .where(eq(tabelaAtividade.eventoId, id));
 
+    const activityPhotos = activities.map(({ foto }) => ({ foto }));
+
+    // As atividades (e seus vínculos com convidados) caem por cascade junto com
+    // o evento; os registros em `convidado` precisam ser limpos na mão.
+    const guestIds = await findGuestIdsByActivities(
+      db,
+      activities.map((activity) => activity.id),
+    );
+
     await db.delete(tabelaEvento).where(eq(tabelaEvento.id, id));
+
+    await removeOrphanGuests(db, guestIds);
 
     await this.storage.tryRemoveByPublicUrl(eventoExistente.foto);
     await Promise.all(

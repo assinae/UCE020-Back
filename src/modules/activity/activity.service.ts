@@ -17,6 +17,12 @@ import { FindAllActivitiesDto } from './dto/find-activities.dto';
 import { UpdateActivityDto } from './dto/update-acitivity.dto';
 import { SupabaseStorageService } from 'src/common/storage/supabase-storage.service';
 import { parseEventDate } from 'src/common/helpers/parse-event-date.helper';
+import {
+  findActivityGuests,
+  findGuestIdsByActivities,
+  removeOrphanGuests,
+  syncActivityGuests,
+} from './helpers/activity-guests.helper';
 
 @Injectable()
 export class ActivityService {
@@ -39,33 +45,44 @@ export class ActivityService {
   async create({ dto, userId }: { dto: CreateActivityDto; userId: number }) {
     await this.assertAuthenticatedUserExists(userId);
 
-    const createdActivities = await db
-      .insert(tabelaAtividade)
-      .values({
-        nome: dto.name,
-        descricao: dto.description,
-        localizacao: dto.location,
-        dataInicio: parseEventDate(dto.startDate),
-        dataFim: parseEventDate(dto.endDate),
-        categoria: dto.category,
-        cargaHoraria: dto.workload ?? 0,
-        status: 'pendente',
-        foto: dto.foto,
-        gerarCertificado: dto.generateCertificate ?? false,
-        eventoId: dto.eventId,
-      })
-      .returning();
+    const createdActivity = await db.transaction(async (tx) => {
+      const createdActivities = await tx
+        .insert(tabelaAtividade)
+        .values({
+          nome: dto.name,
+          descricao: dto.description,
+          localizacao: dto.location,
+          dataInicio: parseEventDate(dto.startDate),
+          dataFim: parseEventDate(dto.endDate),
+          categoria: dto.category,
+          cargaHoraria: dto.workload ?? 0,
+          status: 'pendente',
+          foto: dto.foto,
+          gerarCertificado: dto.generateCertificate ?? false,
+          eventoId: dto.eventId,
+        })
+        .returning();
 
-    const createdActivity = createdActivities.at(0);
+      const activity = createdActivities.at(0);
 
-    if (!createdActivity) {
-      throw new BadRequestException('Não foi possível criar a atividade');
-    }
+      if (!activity) {
+        throw new BadRequestException('Não foi possível criar a atividade');
+      }
+
+      // Os convidados chegam junto com a atividade e precisam ser persistidos
+      // em `convidado` + `convidado_atividade` dentro da mesma transação.
+      await syncActivityGuests(tx, activity.id, dto.guests ?? []);
+
+      return activity;
+    });
+
+    const guests = await findActivityGuests(db, createdActivity.id);
 
     return {
       success: true,
       data: {
         activity: createdActivity,
+        guests,
       },
     };
   }
@@ -181,10 +198,13 @@ export class ActivityService {
       }
     }
 
+    const guests = await findActivityGuests(db, id);
+
     return {
       success: true,
       data: {
         ...activity,
+        guests,
         isRegistered,
       },
     };
@@ -389,14 +409,24 @@ export class ActivityService {
       throw new BadRequestException('Não foi possível atualizar a atividade');
     }
 
+    // `guests` ausente = o front não mexeu na lista; `guests: []` = removeu todos.
+    if (dto.guests !== undefined) {
+      await db.transaction(async (tx) => {
+        await syncActivityGuests(tx, id, dto.guests ?? []);
+      });
+    }
+
     if (dto.foto && currentActivity.foto && dto.foto !== currentActivity.foto) {
       await this.storage.tryRemoveByPublicUrl(currentActivity.foto);
     }
+
+    const guests = await findActivityGuests(db, id);
 
     return {
       success: true,
       data: {
         activity: updatedActivity,
+        guests,
       },
     };
   }
@@ -413,7 +443,13 @@ export class ActivityService {
       throw new NotFoundException('Atividade não encontrada');
     }
 
+    // Guarda os convidados antes: o vínculo em `convidado_atividade` cai por
+    // cascade junto com a atividade, mas o registro em `convidado` ficaria órfão.
+    const guestIds = await findGuestIdsByActivities(db, [id]);
+
     await db.delete(tabelaAtividade).where(eq(tabelaAtividade.id, id));
+
+    await removeOrphanGuests(db, guestIds);
 
     await this.storage.tryRemoveByPublicUrl(activity.foto);
 
