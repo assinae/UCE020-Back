@@ -105,6 +105,15 @@ export class CreateActivityDto {
   generateCertificate?: boolean;
 
   @ApiPropertyOptional({ type: [CreateGuestDto] })
+  // Em multipart/form-data a lista chega serializada como string JSON.
+  @Transform(({ value }: { value: unknown }): unknown => {
+    if (typeof value !== 'string') return value;
+    try {
+      return JSON.parse(value) as unknown;
+    } catch {
+      return value;
+    }
+  })
   @IsArray({ message: 'Os convidados devem ser uma lista.' })
   @IsOptional()
   @ValidateNested({ each: true })
