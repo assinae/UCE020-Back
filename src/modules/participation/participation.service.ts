@@ -133,9 +133,11 @@ export class ParticipationService {
     }
 
     const operador = await this.repo.findSubscription(operadorId, eventoId);
-    if (!operador || !['monitor'].includes(operador.tipo)) {
+    // Organizador é administrador do evento: tem os poderes dos demais papéis.
+    // Ele já podia remover presença, então não poder marcar era incoerente.
+    if (!operador || !['monitor', 'organizador'].includes(operador.tipo)) {
       throw new ForbiddenException(
-        'Apenas monitores do evento podem marcar presença',
+        'Apenas monitores ou organizadores do evento podem marcar presença',
       );
     }
 
