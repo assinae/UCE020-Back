@@ -10,6 +10,7 @@ import { db } from '../../db';
 import {
   tabelaEvento,
   tabelaParticipacoes,
+  tabelaParticipacoesAtividades,
   tabelaAtividade,
   tabelaUsuario,
 } from '../../db/schema';
@@ -419,6 +420,28 @@ export class EventService {
       .from(tabelaParticipacoes)
       .where(eq(tabelaParticipacoes.eventoId, id));
 
+    // Uma consulta agrupada em vez de uma por atividade. A tela de detalhe
+    // mostra a contagem de cada atividade, e sem isso ela exibia sempre zero.
+    const inscritosPorAtividade = new Map<number, number>();
+    if (evento.atividades.length) {
+      const contagens = await db
+        .select({
+          atividadeId: tabelaParticipacoesAtividades.atividadeId,
+          total: sql<number>`count(*)::int`,
+        })
+        .from(tabelaParticipacoesAtividades)
+        .innerJoin(
+          tabelaAtividade,
+          eq(tabelaAtividade.id, tabelaParticipacoesAtividades.atividadeId),
+        )
+        .where(eq(tabelaAtividade.eventoId, id))
+        .groupBy(tabelaParticipacoesAtividades.atividadeId);
+
+      for (const { atividadeId, total } of contagens) {
+        inscritosPorAtividade.set(atividadeId, total);
+      }
+    }
+
     const atividadesFormatadas = evento.atividades.map((atividade) => ({
       id: atividade.id,
       name: atividade.nome,
@@ -429,6 +452,7 @@ export class EventService {
       startDate: atividade.dataInicio,
       endDate: atividade.dataFim,
       eventId: atividade.eventoId,
+      totalInscritos: inscritosPorAtividade.get(atividade.id) ?? 0,
       guests: atividade.convidados.map((vinculo) => ({
         id: vinculo.convidado.id,
         name: vinculo.convidado.nome,
