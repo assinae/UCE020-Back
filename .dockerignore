@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+test
+docs
+drizzle
+tmp
+uploads
+.git
+.github
+.vscode
+.env
+.env.*
+*.log
