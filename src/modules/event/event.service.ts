@@ -351,9 +351,18 @@ export class EventService {
       );
     }
 
+    // Mesma contagem que o findOne devolve. Sem ela a tela de busca por código
+    // não tem de onde tirar o número e mostra o evento sempre com 0 inscritos.
+    const [{ totalInscritos }] = await db
+      .select({
+        totalInscritos: sql<number>`count(${tabelaParticipacoes.id})::int`,
+      })
+      .from(tabelaParticipacoes)
+      .where(eq(tabelaParticipacoes.eventoId, evento.id));
+
     return {
       message: 'Evento encontrado.',
-      data: evento,
+      data: { ...evento, totalInscritos },
     };
   }
 

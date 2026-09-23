@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -8,6 +10,9 @@ import { and, asc, eq } from 'drizzle-orm';
 import { db } from 'src/db';
 import {
   tabelaAtividade,
+  tabelaCertificadoAtividade,
+  tabelaCertificadoConvidado,
+  tabelaEvento,
   tabelaParticipacoes,
   tabelaParticipacoesAtividades,
   tabelaUsuario,
@@ -431,7 +436,33 @@ export class ActivityService {
     };
   }
 
-  async remove({ id }: { id: number; userId: number }) {
+  // Checagem própria em vez do assertEventOrganizer compartilhado: o helper
+  // consulta o usuário num `if (!adminCheck)` sobre um array, que é sempre
+  // truthy, então ele nunca barra ninguém.
+  async assertActivityOrganizer(
+    eventId: number,
+    userId: number,
+  ): Promise<void> {
+    const [participacao] = await db
+      .select({ id: tabelaParticipacoes.id })
+      .from(tabelaParticipacoes)
+      .where(
+        and(
+          eq(tabelaParticipacoes.usuarioId, Number(userId)),
+          eq(tabelaParticipacoes.eventoId, eventId),
+          eq(tabelaParticipacoes.tipo, 'organizador'),
+        ),
+      )
+      .limit(1);
+
+    if (!participacao) {
+      throw new ForbiddenException(
+        'Apenas organizadores do evento podem excluir esta atividade.',
+      );
+    }
+  }
+
+  async remove({ id, userId }: { id: number; userId: number }) {
     const activities = await db
       .select()
       .from(tabelaAtividade)
@@ -441,6 +472,49 @@ export class ActivityService {
 
     if (!activity) {
       throw new NotFoundException('Atividade não encontrada');
+    }
+
+    // Antes de qualquer outra checagem: sem isso, o 409 de certificados
+    // contaria quantos certificados o evento tem para quem não organiza.
+    await this.assertActivityOrganizer(activity.eventoId, userId);
+
+    // Mesma regra que `event.service.update` aplica ao evento. Sem ela, um
+    // evento finalizado ficava protegido contra edição mas continuava
+    // aceitando que suas atividades — e as presenças delas — fossem apagadas.
+    const [evento] = await db
+      .select({ status: tabelaEvento.status })
+      .from(tabelaEvento)
+      .where(eq(tabelaEvento.id, activity.eventoId));
+
+    if (evento?.status === 'finalizada') {
+      throw new BadRequestException(
+        'Não é possível excluir atividades de um evento já finalizado.',
+      );
+    }
+
+    // `certificado_atividade` e `certificado_convidado` caem por cascade junto
+    // com a atividade, e o PDF é montado só no download — não há arquivo
+    // guardado para restaurar depois. Por isso a exclusão é barrada em vez de
+    // apenas avisada.
+    const [certificadosParticipantes, certificadosConvidados] =
+      await Promise.all([
+        db
+          .select({ id: tabelaCertificadoAtividade.id })
+          .from(tabelaCertificadoAtividade)
+          .where(eq(tabelaCertificadoAtividade.atividadeId, id)),
+        db
+          .select({ id: tabelaCertificadoConvidado.id })
+          .from(tabelaCertificadoConvidado)
+          .where(eq(tabelaCertificadoConvidado.atividadeId, id)),
+      ]);
+
+    const totalCertificados =
+      certificadosParticipantes.length + certificadosConvidados.length;
+
+    if (totalCertificados > 0) {
+      throw new ConflictException(
+        `Não é possível excluir a atividade "${activity.nome}": ela já tem ${totalCertificados} certificado(s) emitido(s), que seriam apagados sem possibilidade de recuperação.`,
+      );
     }
 
     // Guarda os convidados antes: o vínculo em `convidado_atividade` cai por

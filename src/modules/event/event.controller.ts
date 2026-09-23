@@ -262,8 +262,14 @@ export class EventController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Listar todos os eventos' })
   @ApiResponse({ status: 200, description: 'Eventos listados com sucesso' })
+  @ApiResponse({
+    status: 401,
+    description: 'Token de autenticação inválido ou ausente',
+  })
   async findAll() {
     return await this.eventService.findAll();
   }
@@ -315,9 +321,17 @@ export class EventController {
     return await this.eventService.findEventsByUser(userId, tipo);
   }
 
+  // Autenticada porque a resposta inclui os convidados das atividades com nome
+  // e e-mail: sem o guard, qualquer pessoa lê o contato dos palestrantes.
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Buscar evento pelo ID' })
   @ApiResponse({ status: 200, description: 'Evento encontrado' })
+  @ApiResponse({
+    status: 401,
+    description: 'Token de autenticação inválido ou ausente',
+  })
   @ApiResponse({ status: 404, description: 'Evento não encontrado' })
   async findOne(@Param('id') id: string) {
     return await this.eventService.findOne(+id);
