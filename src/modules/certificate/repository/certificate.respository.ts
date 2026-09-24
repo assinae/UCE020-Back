@@ -300,13 +300,21 @@ export class CertificateRepository {
       .slice(offset, offset + limit);
   }
 
+  // "Meus certificados": só lista o que já foi assinado. Certificado pendente
+  // de assinatura ainda não é válido para o participante.
   async findByUser(usuarioId: number, page: number, limit: number) {
     const [userRows, activityRows] = await Promise.all([
       this.userCertificateQuery(
-        eq(tabelaCertificadoEvento.usuarioId, usuarioId),
+        and(
+          eq(tabelaCertificadoEvento.usuarioId, usuarioId),
+          eq(tabelaCertificadoEvento.assinado, true),
+        )!,
       ),
       this.activityCertificateQuery(
-        eq(tabelaCertificadoAtividade.usuarioId, usuarioId),
+        and(
+          eq(tabelaCertificadoAtividade.usuarioId, usuarioId),
+          eq(tabelaCertificadoAtividade.assinado, true),
+        )!,
       ),
     ]);
 
