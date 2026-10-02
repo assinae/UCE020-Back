@@ -7,6 +7,8 @@ import {
   timestamp,
   varchar,
   boolean,
+  index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 //Criação das Tabelas no Banco de Dados utilizando Drizzle ORM
@@ -35,6 +37,10 @@ export const tipoParticipanteEnum = pgEnum('tipo_participante', [
   'participante',
   'organizador',
   'monitor',
+]);
+export const acaoRegistroPresencaEnum = pgEnum('acao_registro_presenca', [
+  'confirmacao',
+  'exclusao',
 ]);
 
 //Tabelas
@@ -158,6 +164,42 @@ export const tabelaParticipacoesAtividades = pgTable(
     presente: boolean('presente').notNull().default(false),
     dataPresenca: timestamp('data_presenca', { withTimezone: true }),
   },
+  (table) => [
+    uniqueIndex('participacoes_atividades_participacao_atividade_unique').on(
+      table.participacaoId,
+      table.atividadeId,
+    ),
+  ],
+);
+
+export const tabelaRegistroCheckinAtividade = pgTable(
+  'registro_checkin_atividade',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    participacaoId: integer('participacao_id')
+      .notNull()
+      .references(() => tabelaParticipacoes.id, { onDelete: 'cascade' }),
+    atividadeId: integer('atividade_id')
+      .notNull()
+      .references(() => tabelaAtividade.id, { onDelete: 'cascade' }),
+    acao: acaoRegistroPresencaEnum('acao').notNull(),
+    autorUsuarioId: integer('autor_usuario_id')
+      .notNull()
+      .references(() => tabelaUsuario.id, { onDelete: 'restrict' }),
+    realizadoEm: timestamp('realizado_em', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('registro_checkin_atividade_atividade_realizado_em_idx').on(
+      table.atividadeId,
+      table.realizadoEm,
+    ),
+    index('registro_checkin_atividade_autor_realizado_em_idx').on(
+      table.autorUsuarioId,
+      table.realizadoEm,
+    ),
+  ],
 );
 
 //Tabela de certificado dos participantes
