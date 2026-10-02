@@ -73,7 +73,6 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
   },
-  note: { marginTop: 8, color: '#6b7280', fontSize: 7, lineHeight: 1.35 },
 });
 
 const attendanceColumns = [
@@ -135,6 +134,15 @@ function Footer({ generatedAt }: { generatedAt: string }) {
   });
 }
 
+function formatConfirmationAuthor(name: string): string {
+  if (name === 'Indisponível' || name === '—') return name;
+
+  const [firstName, ...remainingNames] = name.trim().split(/\s+/);
+  if (!firstName || remainingNames.length === 0) return name;
+
+  return `${firstName}\n${remainingNames.map((part) => `${part[0]}.`).join(' ')}`;
+}
+
 export async function renderAttendanceReportPdf(data: {
   title: string;
   eventName: string;
@@ -175,7 +183,11 @@ export async function renderAttendanceReportPdf(data: {
             ...section.rows.map((row, index) =>
               React.createElement(
                 View,
-                { key: `${row.email}-${index}`, style: styles.row },
+                {
+                  key: `${row.email}-${index}`,
+                  style: styles.row,
+                  wrap: false,
+                },
                 React.createElement(
                   Text,
                   { style: [styles.cell, { width: '28%' }] },
@@ -208,7 +220,7 @@ export async function renderAttendanceReportPdf(data: {
                 React.createElement(
                   Text,
                   { style: [styles.cell, { width: '11%' }] },
-                  row.confirmedBy ?? '—',
+                  formatConfirmationAuthor(row.confirmedBy ?? '—'),
                 ),
               ),
             ),
@@ -231,6 +243,7 @@ export async function renderAttendanceReportPdf(data: {
                       {
                         key: `${entry.participantName}-${entry.timestamp}-${index}`,
                         style: styles.row,
+                        wrap: false,
                       },
                       React.createElement(
                         Text,
@@ -258,13 +271,6 @@ export async function renderAttendanceReportPdf(data: {
               )
             : null,
         ),
-      ),
-      React.createElement(
-        Text,
-        { style: styles.note },
-        data.isSimpleEvent
-          ? 'Eventos sem atividades não possuem um ponto de check-in no fluxo atual; por isso esta seção audita as inscrições do evento e não declara presença.'
-          : 'O histórico lista cada confirmação e exclusão de presença, com autor e horário. “Indisponível” indica um registro anterior à implantação da auditoria.',
       ),
       React.createElement(Footer, { generatedAt: data.generatedAt }),
     ),
@@ -303,6 +309,7 @@ export async function renderMonitorReportPdf(data: {
             {
               key: `${row.email}-${row.activityName}-${index}`,
               style: styles.row,
+              wrap: false,
             },
             React.createElement(
               Text,
@@ -336,11 +343,6 @@ export async function renderMonitorReportPdf(data: {
             ),
           ),
         ),
-      ),
-      React.createElement(
-        Text,
-        { style: styles.note },
-        'Inclui monitores e organizadores que confirmaram check-ins. Os totais representam confirmações realizadas, inclusive quando uma presença foi posteriormente removida.',
       ),
       React.createElement(Footer, { generatedAt: data.generatedAt }),
     ),

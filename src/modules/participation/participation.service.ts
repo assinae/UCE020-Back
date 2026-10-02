@@ -352,6 +352,7 @@ export class ParticipationService {
         activityId: atividade.id,
         eventName: evento.nome,
         activityTitle: atividade.nome,
+        activityStatus: atividade.status,
       },
     };
   }
