@@ -171,8 +171,8 @@ export class ReportService {
               confirmedBy: member.presente
                 ? confirmation
                   ? (authorNames.get(confirmation.autorUsuarioId) ??
-                    'Não disponível')
-                  : 'Não disponível'
+                    'Indisponível')
+                  : 'Indisponível'
                 : null,
             };
           }),
