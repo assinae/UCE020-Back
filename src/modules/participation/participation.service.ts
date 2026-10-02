@@ -58,7 +58,6 @@ export class ParticipationService {
     if (!evento) {
       throw new NotFoundException('Evento não encontrado');
     }
-
     if (evento.status === 'finalizada') {
       throw new BadRequestException(
         'Não é possível se inscrever em um evento já finalizado',
@@ -119,6 +118,11 @@ export class ParticipationService {
     const evento = await this.repo.findEventoById(eventoId);
     if (!evento) {
       throw new NotFoundException('Evento não encontrado');
+    }
+    if (evento.status === 'finalizada') {
+      throw new ForbiddenException(
+        'Não é possível alterar presenças de um evento finalizado',
+      );
     }
 
     const atividade = await this.repo.findAtividadeById(atividadeId);
@@ -186,8 +190,15 @@ export class ParticipationService {
     const presenca = await this.repo.markActivityAttendance(
       participante.id,
       atividadeId,
+      operadorId,
       agora,
     );
+
+    if (!presenca) {
+      throw new ConflictException(
+        'Presença já foi marcada para este participante nesta atividade',
+      );
+    }
 
     return {
       message: 'Presença marcada com sucesso',
@@ -211,6 +222,11 @@ export class ParticipationService {
     const evento = await this.repo.findEventoById(eventoId);
     if (!evento) {
       throw new NotFoundException('Evento não encontrado');
+    }
+    if (evento.status === 'finalizada') {
+      throw new ForbiddenException(
+        'Não é possível alterar presenças de um evento finalizado',
+      );
     }
 
     const atividade = await this.repo.findAtividadeById(atividadeId);
@@ -260,7 +276,15 @@ export class ParticipationService {
     const presenca = await this.repo.removeActivityAttendance(
       participante.id,
       atividadeId,
+      operadorId,
+      new Date(),
     );
+
+    if (!presenca) {
+      throw new BadRequestException(
+        'Este participante não possui presença confirmada para remover',
+      );
+    }
 
     return {
       message: 'Presença removida com sucesso',

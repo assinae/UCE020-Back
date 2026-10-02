@@ -12,6 +12,7 @@ import { envValidationSchema } from 'src/config/env.validation';
 import { ActivityModule } from '../activity/activity.module';
 import { RequestLoggerMiddleware } from 'src/common/middleware/request-logger.middleware';
 import databaseConfig from '../../config/database.config';
+import { ReportModule } from '../report/report.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import databaseConfig from '../../config/database.config';
     ActivityModule,
     ParticipationModule,
     CertificateModule,
+    ReportModule,
     EmailModule,
   ],
   controllers: [AppController],
