@@ -5,6 +5,7 @@ import {
   tabelaEvento,
   tabelaParticipacoes,
   tabelaParticipacoesAtividades,
+  tabelaRegistroCheckinAtividade,
 } from 'src/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { tabelaUsuario } from 'src/db/schema';
@@ -87,39 +88,67 @@ export class ParticipationRepository {
   async markActivityAttendance(
     participacaoId: number,
     atividadeId: number,
+    autorUsuarioId: number,
     dataPresenca: Date,
   ) {
-    const [participacaoAtividade] = await db
-      .update(tabelaParticipacoesAtividades)
-      .set({
-        presente: true,
-        dataPresenca,
-      })
-      .where(
-        and(
-          eq(tabelaParticipacoesAtividades.participacaoId, participacaoId),
-          eq(tabelaParticipacoesAtividades.atividadeId, atividadeId),
-        ),
-      )
-      .returning();
-    return participacaoAtividade;
+    return db.transaction(async (tx) => {
+      const [participacaoAtividade] = await tx
+        .update(tabelaParticipacoesAtividades)
+        .set({ presente: true, dataPresenca })
+        .where(
+          and(
+            eq(tabelaParticipacoesAtividades.participacaoId, participacaoId),
+            eq(tabelaParticipacoesAtividades.atividadeId, atividadeId),
+            eq(tabelaParticipacoesAtividades.presente, false),
+          ),
+        )
+        .returning();
+
+      if (!participacaoAtividade) return null;
+
+      await tx.insert(tabelaRegistroCheckinAtividade).values({
+        participacaoId,
+        atividadeId,
+        acao: 'confirmacao',
+        autorUsuarioId,
+        realizadoEm: dataPresenca,
+      });
+
+      return participacaoAtividade;
+    });
   }
 
-  async removeActivityAttendance(participacaoId: number, atividadeId: number) {
-    const [participacaoAtividade] = await db
-      .update(tabelaParticipacoesAtividades)
-      .set({
-        presente: false,
-        dataPresenca: null,
-      })
-      .where(
-        and(
-          eq(tabelaParticipacoesAtividades.participacaoId, participacaoId),
-          eq(tabelaParticipacoesAtividades.atividadeId, atividadeId),
-        ),
-      )
-      .returning();
-    return participacaoAtividade;
+  async removeActivityAttendance(
+    participacaoId: number,
+    atividadeId: number,
+    autorUsuarioId: number,
+    realizadoEm: Date,
+  ) {
+    return db.transaction(async (tx) => {
+      const [participacaoAtividade] = await tx
+        .update(tabelaParticipacoesAtividades)
+        .set({ presente: false, dataPresenca: null })
+        .where(
+          and(
+            eq(tabelaParticipacoesAtividades.participacaoId, participacaoId),
+            eq(tabelaParticipacoesAtividades.atividadeId, atividadeId),
+            eq(tabelaParticipacoesAtividades.presente, true),
+          ),
+        )
+        .returning();
+
+      if (!participacaoAtividade) return null;
+
+      await tx.insert(tabelaRegistroCheckinAtividade).values({
+        participacaoId,
+        atividadeId,
+        acao: 'exclusao',
+        autorUsuarioId,
+        realizadoEm,
+      });
+
+      return participacaoAtividade;
+    });
   }
 
   async findConfirmedAttendancesForEvent(usuarioId: number, eventoId: number) {
