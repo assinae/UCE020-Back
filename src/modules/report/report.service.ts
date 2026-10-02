@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { and, asc, eq } from 'drizzle-orm';
 import { db } from 'src/db';
 import {
@@ -32,6 +36,24 @@ export class ReportService {
       dateStyle: 'short',
       timeStyle: 'medium',
     }).format(date);
+  }
+
+  private formatReportDateTime(date: Date | null): string {
+    if (!date) return '—';
+    const parts = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Bahia',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(date);
+    const value = (type: Intl.DateTimeFormatPartTypes) =>
+      parts.find((part) => part.type === type)?.value ?? '';
+
+    return `${value('day')}/${value('month')}/${value('year')}\n${value('hour')}:${value('minute')}:${value('second')}`;
   }
 
   private async getEventForOrganizer(eventId: number, userId: number) {
@@ -114,18 +136,25 @@ export class ReportService {
       )
       .orderBy(asc(tabelaAtividade.dataInicio));
 
-    const logs = await this.getAuditLogs(activities.map((activity) => activity.id));
+    const logs = await this.getAuditLogs(
+      activities.map((activity) => activity.id),
+    );
     const authors = await db
       .select({ id: tabelaUsuario.id, nome: tabelaUsuario.nome })
       .from(tabelaUsuario);
-    const authorNames = new Map(authors.map((author) => [author.id, author.nome]));
+    const authorNames = new Map(
+      authors.map((author) => [author.id, author.nome]),
+    );
 
     const latestConfirmation = new Map<string, AuditLog>();
     const histories = new Map<number, AuditLog[]>();
     for (const log of logs) {
       const key = `${log.participacaoId}:${log.atividadeId}`;
       if (log.acao === 'confirmacao') latestConfirmation.set(key, log);
-      histories.set(log.atividadeId, [...(histories.get(log.atividadeId) ?? []), log]);
+      histories.set(log.atividadeId, [
+        ...(histories.get(log.atividadeId) ?? []),
+        log,
+      ]);
     }
 
     return Promise.all(
@@ -142,9 +171,15 @@ export class ReportService {
           .from(tabelaParticipacoesAtividades)
           .innerJoin(
             tabelaParticipacoes,
-            eq(tabelaParticipacoesAtividades.participacaoId, tabelaParticipacoes.id),
+            eq(
+              tabelaParticipacoesAtividades.participacaoId,
+              tabelaParticipacoes.id,
+            ),
           )
-          .innerJoin(tabelaUsuario, eq(tabelaParticipacoes.usuarioId, tabelaUsuario.id))
+          .innerJoin(
+            tabelaUsuario,
+            eq(tabelaParticipacoes.usuarioId, tabelaUsuario.id),
+          )
           .where(eq(tabelaParticipacoesAtividades.atividadeId, activity.id))
           .orderBy(asc(tabelaUsuario.nome));
         const memberNames = new Map(
@@ -166,7 +201,7 @@ export class ReportService {
               present: member.presente,
               checkedInAt:
                 member.presente && member.dataPresenca
-                  ? this.formatDateTime(member.dataPresenca)
+                  ? this.formatReportDateTime(member.dataPresenca)
                   : null,
               confirmedBy: member.presente
                 ? confirmation
@@ -187,7 +222,7 @@ export class ReportService {
                   ? 'Presença confirmada'
                   : 'Presença excluída',
               author: authorNames.get(log.autorUsuarioId) ?? 'Usuário removido',
-              timestamp: this.formatDateTime(log.realizadoEm),
+              timestamp: this.formatReportDateTime(log.realizadoEm),
             })),
         };
       }),
@@ -219,7 +254,10 @@ export class ReportService {
           tipo: tabelaParticipacoes.tipo,
         })
         .from(tabelaParticipacoes)
-        .innerJoin(tabelaUsuario, eq(tabelaParticipacoes.usuarioId, tabelaUsuario.id))
+        .innerJoin(
+          tabelaUsuario,
+          eq(tabelaParticipacoes.usuarioId, tabelaUsuario.id),
+        )
         .where(eq(tabelaParticipacoes.eventoId, eventId))
         .orderBy(asc(tabelaUsuario.nome));
       sections.push({
@@ -262,19 +300,30 @@ export class ReportService {
       .select({ id: tabelaAtividade.id, nome: tabelaAtividade.nome })
       .from(tabelaAtividade)
       .where(eq(tabelaAtividade.eventoId, eventId));
-    const activityNames = new Map(activities.map((activity) => [activity.id, activity.nome]));
-    const logs = (await this.getAuditLogs(activities.map((activity) => activity.id))).filter(
-      (log) => log.acao === 'confirmacao',
+    const activityNames = new Map(
+      activities.map((activity) => [activity.id, activity.nome]),
     );
+    const logs = (
+      await this.getAuditLogs(activities.map((activity) => activity.id))
+    ).filter((log) => log.acao === 'confirmacao');
     const authors = await db
-      .select({ id: tabelaUsuario.id, nome: tabelaUsuario.nome, email: tabelaUsuario.email })
+      .select({
+        id: tabelaUsuario.id,
+        nome: tabelaUsuario.nome,
+        email: tabelaUsuario.email,
+      })
       .from(tabelaUsuario);
     const authorMap = new Map(authors.map((author) => [author.id, author]));
     const memberships = await db
-      .select({ usuarioId: tabelaParticipacoes.usuarioId, tipo: tabelaParticipacoes.tipo })
+      .select({
+        usuarioId: tabelaParticipacoes.usuarioId,
+        tipo: tabelaParticipacoes.tipo,
+      })
       .from(tabelaParticipacoes)
       .where(eq(tabelaParticipacoes.eventoId, eventId));
-    const roles = new Map(memberships.map((membership) => [membership.usuarioId, membership.tipo]));
+    const roles = new Map(
+      memberships.map((membership) => [membership.usuarioId, membership.tipo]),
+    );
 
     const groups = new Map<string, AuditLog[]>();
     for (const log of logs) {
@@ -293,12 +342,16 @@ export class ReportService {
           email: author?.email ?? '—',
           role: roles.get(authorId) ?? '—',
           activityName: activityNames.get(activityId) ?? 'Atividade removida',
-          firstCheckin: this.formatDateTime(times[0] ?? null),
-          lastCheckin: this.formatDateTime(times.at(-1) ?? null),
+          firstCheckin: this.formatReportDateTime(times[0] ?? null),
+          lastCheckin: this.formatReportDateTime(times.at(-1) ?? null),
           totalCheckins: entries.length,
         };
       })
-      .sort((a, b) => a.name.localeCompare(b.name) || a.activityName.localeCompare(b.activityName));
+      .sort(
+        (a, b) =>
+          a.name.localeCompare(b.name) ||
+          a.activityName.localeCompare(b.activityName),
+      );
 
     return renderMonitorReportPdf({
       eventName: event.nome,
