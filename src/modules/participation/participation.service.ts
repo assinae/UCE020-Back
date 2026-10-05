@@ -109,6 +109,41 @@ export class ParticipationService {
     }
   }
 
+  async getEventProgress(usuarioId: number, eventoId: number) {
+    const participacao = await this.repo.findSubscription(usuarioId, eventoId);
+    if (!participacao) {
+      throw new NotFoundException('Inscrição não encontrada');
+    }
+
+    const [evento, atividades, atividadesPresentes] = await Promise.all([
+      this.repo.findEventoById(eventoId),
+      this.repo.findActivitiesWorkloadByEvent(eventoId),
+      this.repo.findPresentActivityIds(participacao.id),
+    ]);
+
+    if (!evento) {
+      throw new NotFoundException('Evento não encontrado');
+    }
+
+    const presentes = new Set(atividadesPresentes);
+    const agora = Date.now();
+
+    return {
+      message: 'Progresso do evento encontrado com sucesso',
+      data: {
+        tipo: participacao.tipo,
+        cargaHorariaCumprida: atividades
+          .filter((atividade) => presentes.has(atividade.id))
+          .reduce((total, atividade) => total + atividade.cargaHoraria, 0),
+        cargaHorariaTotal: evento.cargaHoraria,
+        atividadesConcluidas: atividades.filter(
+          (atividade) => atividade.dataFim.getTime() < agora,
+        ).length,
+        totalAtividades: atividades.length,
+      },
+    };
+  }
+
   async markActivityAttendance(
     operadorId: number,
     eventoId: number,
