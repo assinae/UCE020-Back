@@ -13,6 +13,7 @@ import {
   ApiConflictResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+  ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
   ApiBadRequestResponse,
@@ -119,6 +120,33 @@ export class ParticipationController {
       //userId: user.sub,
       tipo: data,
     };
+  }
+
+  @Get('progress')
+  @ApiOperation({ summary: 'Progresso do usuário logado no evento' })
+  @ApiOkResponse({
+    description: 'Carga horária cumprida e atividades concluídas no evento',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Progresso do evento encontrado com sucesso',
+        data: {
+          tipo: 'participante',
+          cargaHorariaCumprida: 12,
+          cargaHorariaTotal: 20,
+          atividadesConcluidas: 3,
+          totalAtividades: 5,
+        },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Inscrição ou evento não encontrado' })
+  @ApiUnauthorizedResponse({ description: 'Token ausente ou inválido' })
+  async getEventProgress(
+    @User() user: JwtPayload,
+    @Param('eventoId', ParseIntPipe) eventoId: number,
+  ) {
+    return await this.participationService.getEventProgress(user.sub, eventoId);
   }
 
   @Post('activity/:atividadeId/attendance')
