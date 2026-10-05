@@ -172,6 +172,31 @@ export class ParticipationRepository {
     return rows;
   }
 
+  async findActivitiesWorkloadByEvent(eventoId: number) {
+    return db
+      .select({
+        id: tabelaAtividade.id,
+        cargaHoraria: tabelaAtividade.cargaHoraria,
+        dataFim: tabelaAtividade.dataFim,
+      })
+      .from(tabelaAtividade)
+      .where(eq(tabelaAtividade.eventoId, eventoId));
+  }
+
+  async findPresentActivityIds(participacaoId: number) {
+    const rows = await db
+      .select({ atividadeId: tabelaParticipacoesAtividades.atividadeId })
+      .from(tabelaParticipacoesAtividades)
+      .where(
+        and(
+          eq(tabelaParticipacoesAtividades.participacaoId, participacaoId),
+          eq(tabelaParticipacoesAtividades.presente, true),
+        ),
+      );
+
+    return rows.map((row) => row.atividadeId);
+  }
+
   async subscribe(usuarioId: number, eventoId: number) {
     const [participacao] = await db
       .insert(tabelaParticipacoes)
