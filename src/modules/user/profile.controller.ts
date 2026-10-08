@@ -5,7 +5,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth, ApiBadRequestResponse, ApiBody, ApiConflictResponse,
-  ApiConsumes, ApiNotFoundResponse, ApiOkResponse, ApiTags,
+  ApiConsumes, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
@@ -13,6 +13,7 @@ import { UserService } from './user.service';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UserActivityResponseDto } from './dto/user-activity-response.dto';
 // TODO: trocar pelo serviço de storage real do projeto (S3, disco, etc.).
 // Aqui ele é só um contrato: recebe o arquivo e devolve a URL final salva.
 import { AvatarStorageService } from './avatar-storage.service';
@@ -40,6 +41,18 @@ export class UserProfileController {
   @ApiNotFoundResponse({ description: 'Usuário não encontrado' })
   getProfile(@Req() req: AuthenticatedRequest) {
     return this.userService.getUser(req.user.sub);
+  }
+
+  @Get('atividade')
+  @ApiOperation({
+    summary: 'Resumo de atividade do usuário',
+    description:
+      'Eventos organizados, certificados assinados recebidos, carga horária somada desses certificados e histórico de eventos com o papel do usuário em cada um.',
+  })
+  @ApiOkResponse({ description: 'Resumo de atividade do usuário', type: UserActivityResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Token ausente ou inválido' })
+  getActivity(@Req() req: AuthenticatedRequest) {
+    return this.userService.getActivitySummary(req.user.sub);
   }
 
   @Patch()
