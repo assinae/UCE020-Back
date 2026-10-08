@@ -69,6 +69,27 @@ export class UserService {
     return atualizado;
   }
 
+  async getActivitySummary(userId: number) {
+    const [historico, horasCertificados] = await Promise.all([
+      this.repo.findEventHistory(userId),
+      this.repo.findSignedCertificateHours(userId),
+    ]);
+
+    const eventosOrganizados = new Set(
+      historico.filter(item => item.papel === 'organizador').map(item => item.eventoId),
+    ).size;
+
+    return {
+      message: 'Resumo de atividade do usuário',
+      data: {
+        eventosOrganizados,
+        certificadosRecebidos: horasCertificados.length,
+        cargaHorariaTotal: horasCertificados.reduce((total, horas) => total + horas, 0),
+        historico,
+      },
+    };
+  }
+
   // ── admin (contexto /user) ─────────────────────────────────────────
 
   async getUser(id: number) {
