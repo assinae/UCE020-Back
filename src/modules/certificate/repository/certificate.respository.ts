@@ -14,7 +14,7 @@ import {
   tabelaParticipacoesAtividades,
 } from 'src/db/schema';
 import { and, eq, or, sql, SQL } from 'drizzle-orm';
-import { PgTable } from 'drizzle-orm/pg-core';
+import { PgTable, alias } from 'drizzle-orm/pg-core';
 import type { CertificateLayoutSnapshot } from '../pdf/certificate-layout-snapshot';
 
 export interface EventoCertParaAssinar {
@@ -77,8 +77,12 @@ export interface CertificadoVerificado {
   dataEmissao: Date;
   assinadoEm: Date | null;
   assinaturaNome: string | null;
+  assinaturaEmail: string | null; // email do usuário que assinou
   hashVerificacao: string | null;
 }
+
+/** Alias de usuario para o assinante (a tabela já é usada para o titular). */
+const tabelaAssinante = alias(tabelaUsuario, 'assinante');
 
 /** usuarioId/eventoId voltam junto porque a autorização do download depende deles. */
 export interface EventoCertParaRender {
@@ -175,6 +179,7 @@ export class CertificateRepository {
         participantName: tabelaUsuario.nome,
         participantEmail: tabelaUsuario.email,
         role: tabelaParticipacoes.tipo,
+        activityId: sql<number | null>`null`,
         location: tabelaEvento.localizacao,
         activityTitle: tabelaEvento.nome,
         activityHours: tabelaEvento.cargaHoraria,
@@ -212,6 +217,7 @@ export class CertificateRepository {
         participantName: tabelaConvidado.nome,
         participantEmail: tabelaConvidado.email,
         role: tabelaConvidadoAtividade.funcao,
+        activityId: tabelaAtividade.id,
         location: tabelaAtividade.localizacao,
         activityTitle: tabelaAtividade.nome,
         activityHours: tabelaAtividade.cargaHoraria,
@@ -255,6 +261,7 @@ export class CertificateRepository {
         participantName: tabelaUsuario.nome,
         participantEmail: tabelaUsuario.email,
         role: tabelaParticipacoes.tipo,
+        activityId: tabelaAtividade.id,
         location: tabelaAtividade.localizacao,
         activityTitle: tabelaAtividade.nome,
         activityHours: tabelaAtividade.cargaHoraria,
@@ -287,21 +294,25 @@ export class CertificateRepository {
       .where(condition);
   }
 
-  async findByEvent(eventoId: number, page: number, limit: number) {
+  async findAllByEvent(eventoId: number) {
     const [userRows, guestRows, activityRows] = await Promise.all([
       this.userCertificateQuery(eq(tabelaCertificadoEvento.eventoId, eventoId)),
       this.guestCertificateQuery(eq(tabelaAtividade.eventoId, eventoId)),
       this.activityCertificateQuery(eq(tabelaAtividade.eventoId, eventoId)),
     ]);
 
-    const offset = (page - 1) * limit;
     return [
       ...userRows.map((row) => ({ ...row, kind: 'user' as const })),
       ...guestRows.map((row) => ({ ...row, kind: 'guest' as const })),
       ...activityRows.map((row) => ({ ...row, kind: 'activity' as const })),
     ]
-      .sort((a, b) => b.dataEmissao.getTime() - a.dataEmissao.getTime())
-      .slice(offset, offset + limit);
+      .sort((a, b) => b.dataEmissao.getTime() - a.dataEmissao.getTime());
+  }
+
+  async findByEvent(eventoId: number, page: number, limit: number) {
+    const rows = await this.findAllByEvent(eventoId);
+    const offset = (page - 1) * limit;
+    return rows.slice(offset, offset + limit);
   }
 
   // "Meus certificados": só lista o que já foi assinado. Certificado pendente
@@ -836,9 +847,14 @@ export class CertificateRepository {
         dataEmissao: tabelaCertificadoEvento.dataEmissao,
         assinadoEm: tabelaCertificadoEvento.assinadoEm,
         assinaturaNome: tabelaCertificadoEvento.assinaturaNome,
+        assinaturaEmail: tabelaAssinante.email,
         hashVerificacao: tabelaCertificadoEvento.hashVerificacao,
       })
       .from(tabelaCertificadoEvento)
+      .leftJoin(
+        tabelaAssinante,
+        eq(tabelaCertificadoEvento.assinadoPor, tabelaAssinante.id),
+      )
       .innerJoin(
         tabelaUsuario,
         eq(tabelaCertificadoEvento.usuarioId, tabelaUsuario.id),
@@ -857,9 +873,14 @@ export class CertificateRepository {
         dataEmissao: tabelaCertificadoAtividade.dataEmissao,
         assinadoEm: tabelaCertificadoAtividade.assinadoEm,
         assinaturaNome: tabelaCertificadoAtividade.assinaturaNome,
+        assinaturaEmail: tabelaAssinante.email,
         hashVerificacao: tabelaCertificadoAtividade.hashVerificacao,
       })
       .from(tabelaCertificadoAtividade)
+      .leftJoin(
+        tabelaAssinante,
+        eq(tabelaCertificadoAtividade.assinadoPor, tabelaAssinante.id),
+      )
       .innerJoin(
         tabelaUsuario,
         eq(tabelaCertificadoAtividade.usuarioId, tabelaUsuario.id),
@@ -878,9 +899,14 @@ export class CertificateRepository {
         dataEmissao: tabelaCertificadoConvidado.dataEmissao,
         assinadoEm: tabelaCertificadoConvidado.assinadoEm,
         assinaturaNome: tabelaCertificadoConvidado.assinaturaNome,
+        assinaturaEmail: tabelaAssinante.email,
         hashVerificacao: tabelaCertificadoConvidado.hashVerificacao,
       })
       .from(tabelaCertificadoConvidado)
+      .leftJoin(
+        tabelaAssinante,
+        eq(tabelaCertificadoConvidado.assinadoPor, tabelaAssinante.id),
+      )
       .innerJoin(
         tabelaConvidado,
         eq(tabelaCertificadoConvidado.convidadoId, tabelaConvidado.id),

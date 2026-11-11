@@ -46,7 +46,7 @@ export class CertificateController {
   @Get('stats')
   @ApiOkResponse({
     description:
-      'Quantidade de certificados emitidos por papel (ouvinte, monitor, organizador, palestrante)',
+      'Resumo de certificados separado por evento e atividade, com totais por status e papel.',
   })
   @ApiUnauthorizedResponse({ description: 'Token ausente ou inválido' })
   getCertificateStatsByEvent(
