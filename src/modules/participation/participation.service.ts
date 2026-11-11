@@ -77,6 +77,16 @@ export class ParticipationService {
   }
 
   async unsubscribe(usuarioId: number, eventoId: number) {
+    const evento = await this.repo.findEventoById(eventoId);
+    if (!evento) {
+      throw new NotFoundException('Evento não encontrado');
+    }
+    if (evento.status === 'finalizada') {
+      throw new ForbiddenException(
+        'Não é possível remover participantes de um evento finalizado',
+      );
+    }
+
     const existente = await this.repo.findSubscription(usuarioId, eventoId);
     if (!existente) {
       throw new NotFoundException('Inscrição não encontrada');
@@ -210,9 +220,13 @@ export class ParticipationService {
     const inicioAtividade = new Date(atividade.dataInicio);
     const fimAtividade = new Date(atividade.dataFim);
 
-    if (agora < inicioAtividade) {
+    const inicioJanelaPresenca = new Date(
+      inicioAtividade.getTime() - 60 * 60 * 1000,
+    );
+
+    if (agora < inicioJanelaPresenca) {
       throw new BadRequestException(
-        'A atividade ainda não começou. A presença só pode ser marcada a partir do horário de início.',
+        'A validação de presença será liberada uma hora antes do início da atividade.',
       );
     }
 
@@ -388,6 +402,7 @@ export class ParticipationService {
         eventName: evento.nome,
         activityTitle: atividade.nome,
         activityStatus: atividade.status,
+        activityStartsAt: atividade.dataInicio,
       },
     };
   }

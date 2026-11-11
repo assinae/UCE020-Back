@@ -50,8 +50,8 @@ export class CertificateCustomizationPreviewEventDto {
   @IsDateString()
   dataFim!: string;
 
-  @IsEnum(['pendente', 'iniciada', 'andamento', 'finalizada'])
-  status!: 'pendente' | 'iniciada' | 'andamento' | 'finalizada';
+  @IsEnum(['pendente', 'andamento', 'finalizada'])
+  status!: 'pendente' | 'andamento' | 'finalizada';
 }
 
 export class CertificateCustomizationPreviewDto {

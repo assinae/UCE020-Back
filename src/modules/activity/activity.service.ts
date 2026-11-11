@@ -22,6 +22,7 @@ import { FindAllActivitiesDto } from './dto/find-activities.dto';
 import { UpdateActivityDto } from './dto/update-acitivity.dto';
 import { SupabaseStorageService } from 'src/common/storage/supabase-storage.service';
 import { parseEventDate } from 'src/common/helpers/parse-event-date.helper';
+import { assertEventActive } from 'src/common/helpers/assert-event-active.helper';
 import {
   findActivityGuests,
   findGuestIdsByActivities,
@@ -49,6 +50,8 @@ export class ActivityService {
 
   async create({ dto, userId }: { dto: CreateActivityDto; userId: number }) {
     await this.assertAuthenticatedUserExists(userId);
+    await this.assertActivityOrganizer(dto.eventId, userId);
+    await assertEventActive(dto.eventId);
 
     const createdActivity = await db.transaction(async (tx) => {
       const createdActivities = await tx
@@ -227,6 +230,13 @@ export class ActivityService {
       throw new NotFoundException('Atividade não encontrada');
     }
 
+    await assertEventActive(activity.eventoId);
+    if (activity.status === 'finalizada') {
+      throw new BadRequestException(
+        'Não é possível se inscrever em uma atividade finalizada.',
+      );
+    }
+
     const participations = await db
       .select()
       .from(tabelaParticipacoes)
@@ -300,6 +310,13 @@ export class ActivityService {
 
     if (!activity) {
       throw new NotFoundException('Atividade não encontrada');
+    }
+
+    await assertEventActive(activity.eventoId);
+    if (activity.status === 'finalizada') {
+      throw new BadRequestException(
+        'Não é possível cancelar a inscrição em uma atividade finalizada.',
+      );
     }
 
     const participations = await db
@@ -386,6 +403,9 @@ export class ActivityService {
     if (!currentActivity) {
       throw new NotFoundException('Atividade não encontrada');
     }
+
+    await this.assertActivityOrganizer(currentActivity.eventoId, userId);
+    await assertEventActive(currentActivity.eventoId);
 
     const updatedActivities = await db
       .update(tabelaAtividade)

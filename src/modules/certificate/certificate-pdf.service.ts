@@ -7,16 +7,18 @@ import {
 import { CertificateRepository } from './repository/certificate.respository';
 import { renderParticipantCertificatePdf } from './pdf/participant-certificate.pdf';
 import { renderGuestCertificatePdf } from './pdf/guest-certificate.pdf';
-import { formatDateRange } from './pdf/format-date-range';
 import { parseCertificateId } from './certificate-id';
-import { mapGuestRole, mapParticipantRole } from './certificate-roles';
 import { gerarQrPng } from './signature/qr';
 import { PdfCache } from './pdf-cache';
 import {
-  formatarDataHoraAssinatura,
   urlVerificacao,
 } from './signature/signature-format';
-import { resolveCertificateTemplateUrl } from './pdf/certificate-template';
+import { createCertificateLayoutSnapshot } from './pdf/certificate-layout-snapshot';
+import {
+  formatDateRange,
+} from './pdf/format-date-range';
+import { formatarDataHoraAssinatura } from './signature/signature-format';
+import { certificateStyles } from './pdf/certificate.styles';
 
 interface EstadoAssinatura {
   assinado: boolean;
@@ -94,34 +96,37 @@ export class CertificatePdfService {
       await this.assertOrganizador(userId, cert.eventoId);
     }
 
+    const layout =
+      cert.certificadoLayoutSnapshot ?? createCertificateLayoutSnapshot(cert);
     const dados = {
       certificateId: cert.id,
       participantName: cert.participantName,
-      role: mapParticipantRole(cert.role),
+      role: ({ participante: 'Ouvinte', monitor: 'Monitor', organizador: 'Organizador' } as Record<string, string>)[cert.role.toLowerCase()] ?? cert.role,
       eventName: cert.eventName,
       workloadHours: cert.workloadHours,
       location: cert.location,
       eventDate: formatDateRange(cert.dataInicio, cert.dataFim),
       issueDate: cert.dataEmissao,
-      assinante1Nome: cert.assinante1Nome ?? undefined,
-      assinante1Titulo: cert.assinante1Titulo ?? undefined,
-      assinante2Nome: cert.assinante2Nome ?? undefined,
-      assinante2Titulo: cert.assinante2Titulo ?? undefined,
-      templateUrl: resolveCertificateTemplateUrl({
-        templateUrl: cert.templateUrl,
-        certificadoTemplate: cert.certificadoTemplate,
-        template: cert.template,
-      }),
+      assinante1Nome: layout.signers.primaryName ?? undefined,
+      assinante1Titulo: layout.signers.primaryTitle ?? undefined,
+      assinante2Nome: layout.signers.secondaryName ?? undefined,
+      assinante2Titulo: layout.signers.secondaryTitle ?? undefined,
+      templateUrl: layout.templateUrl,
+      layoutStyles: layout.styles as typeof certificateStyles,
       textos: {
-        titulo: cert.certificadoTitulo,
-        subtitulo: cert.certificadoSubtitulo,
-        descricaoInicio: cert.certificadoDescricaoInicio,
-        descricaoEvento: cert.certificadoDescricaoEvento,
-        descricaoCargaHoraria: cert.certificadoDescricaoCargaHoraria,
+        titulo: layout.texts.title,
+        subtitulo: layout.texts.subtitle,
+        descricaoInicio: layout.texts.descriptionStart,
+        descricaoEvento: layout.texts.descriptionEvent,
+        descricaoCargaHoraria: layout.texts.descriptionWorkload,
       },
     };
 
-    const etag = this.calcularEtag('user', dados, cert);
+    const etag = this.calcularEtag(
+      'user',
+      dados,
+      cert,
+    );
 
     return {
       etag,
@@ -130,7 +135,7 @@ export class CertificatePdfService {
         this.renderComCache(etag, async () =>
           renderParticipantCertificatePdf({
             ...dados,
-            assinatura: await this.montarAssinatura(cert),
+            assinatura: await this.montarAssinatura(cert, layout),
           }),
         ),
     };
@@ -148,28 +153,31 @@ export class CertificatePdfService {
     // Convidado não é usuário do sistema: não há "dono" que possa baixar.
     await this.assertOrganizador(userId, cert.eventoId);
 
+    const layout =
+      cert.certificadoLayoutSnapshot ?? createCertificateLayoutSnapshot(cert);
     const dados = {
       certificateId: cert.id,
       guestName: cert.guestName,
-      role: mapGuestRole(cert.role),
+      role: ({ palestrante: 'Palestrante', ministrante: 'Ministrante', moderador: 'Moderador' } as Record<string, string>)[cert.role.toLowerCase()] ?? cert.role,
       eventName: cert.eventName,
       activityName: cert.activityName,
       workloadHours: cert.workloadHours,
       location: cert.location,
       eventDate: formatDateRange(cert.dataInicio, cert.dataFim),
       issueDate: cert.dataEmissao,
-      assinante1Nome: cert.assinante1Nome ?? undefined,
-      assinante1Titulo: cert.assinante1Titulo ?? undefined,
-      assinante2Nome: cert.assinante2Nome ?? undefined,
-      assinante2Titulo: cert.assinante2Titulo ?? undefined,
-      templateUrl: resolveCertificateTemplateUrl({
-        templateUrl: cert.templateUrl,
-        certificadoTemplate: cert.certificadoTemplate,
-        template: cert.template,
-      }),
+      assinante1Nome: layout.signers.primaryName ?? undefined,
+      assinante1Titulo: layout.signers.primaryTitle ?? undefined,
+      assinante2Nome: layout.signers.secondaryName ?? undefined,
+      assinante2Titulo: layout.signers.secondaryTitle ?? undefined,
+      templateUrl: layout.templateUrl,
+      layoutStyles: layout.styles as typeof certificateStyles,
     };
 
-    const etag = this.calcularEtag('guest', dados, cert);
+    const etag = this.calcularEtag(
+      'guest',
+      dados,
+      cert,
+    );
 
     return {
       etag,
@@ -178,7 +186,7 @@ export class CertificatePdfService {
         this.renderComCache(etag, async () =>
           renderGuestCertificatePdf({
             ...dados,
-            assinatura: await this.montarAssinatura(cert),
+            assinatura: await this.montarAssinatura(cert, layout),
           }),
         ),
     };
@@ -198,10 +206,12 @@ export class CertificatePdfService {
       await this.assertOrganizador(userId, cert.eventoId);
     }
 
+    const layout =
+      cert.certificadoLayoutSnapshot ?? createCertificateLayoutSnapshot(cert);
     const dados = {
       certificateId: cert.id,
       participantName: cert.participantName,
-      role: mapParticipantRole(cert.role),
+      role: ({ participante: 'Ouvinte', monitor: 'Monitor', organizador: 'Organizador' } as Record<string, string>)[cert.role.toLowerCase()] ?? cert.role,
       // renderParticipantCertificatePdf só tem um campo de "nome do contexto" —
       // pra atividade, o certificado é sobre a atividade, não o evento inteiro.
       eventName: cert.activityName,
@@ -210,18 +220,19 @@ export class CertificatePdfService {
       location: cert.location,
       eventDate: formatDateRange(cert.dataInicio, cert.dataFim),
       issueDate: cert.dataEmissao,
-      assinante1Nome: cert.assinante1Nome ?? undefined,
-      assinante1Titulo: cert.assinante1Titulo ?? undefined,
-      assinante2Nome: cert.assinante2Nome ?? undefined,
-      assinante2Titulo: cert.assinante2Titulo ?? undefined,
-      templateUrl: resolveCertificateTemplateUrl({
-        templateUrl: cert.templateUrl,
-        certificadoTemplate: cert.certificadoTemplate,
-        template: cert.template,
-      }),
+      assinante1Nome: layout.signers.primaryName ?? undefined,
+      assinante1Titulo: layout.signers.primaryTitle ?? undefined,
+      assinante2Nome: layout.signers.secondaryName ?? undefined,
+      assinante2Titulo: layout.signers.secondaryTitle ?? undefined,
+      templateUrl: layout.templateUrl,
+      layoutStyles: layout.styles as typeof certificateStyles,
     };
 
-    const etag = this.calcularEtag('activity', dados, cert);
+    const etag = this.calcularEtag(
+      'activity',
+      dados,
+      cert,
+    );
 
     return {
       etag,
@@ -230,7 +241,7 @@ export class CertificatePdfService {
         this.renderComCache(etag, async () =>
           renderParticipantCertificatePdf({
             ...dados,
-            assinatura: await this.montarAssinatura(cert),
+            assinatura: await this.montarAssinatura(cert, layout),
           }),
         ),
     };
@@ -286,12 +297,17 @@ export class CertificatePdfService {
     }
   }
 
-  private async montarAssinatura(cert: EstadoAssinatura) {
+  private async montarAssinatura(
+    cert: EstadoAssinatura,
+    layout: { verificationUrlBase: string | null },
+  ) {
     if (!cert.assinado || !cert.assinadoEm || !cert.codigoVerificacao) {
       return undefined;
     }
 
-    const qr = await gerarQrPng(urlVerificacao(cert.codigoVerificacao));
+    const qr = await gerarQrPng(
+      urlVerificacao(cert.codigoVerificacao, layout.verificationUrlBase),
+    );
 
     return {
       nome: cert.assinaturaNome ?? 'Organizador',
