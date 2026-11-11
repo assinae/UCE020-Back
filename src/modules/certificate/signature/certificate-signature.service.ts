@@ -149,6 +149,7 @@ export class CertificateSignatureService {
         emitidoEm: formatBahiaDate(cert.dataEmissao),
         assinadoEm: formatBahiaDate(cert.assinadoEm),
         assinadoPor: cert.assinaturaNome,
+        assinadoPorEmail: cert.assinaturaEmail,
         hash: cert.hashVerificacao,
       },
     };
