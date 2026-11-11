@@ -175,6 +175,7 @@ export class CertificateRepository {
         participantName: tabelaUsuario.nome,
         participantEmail: tabelaUsuario.email,
         role: tabelaParticipacoes.tipo,
+        activityId: sql<number | null>`null`,
         location: tabelaEvento.localizacao,
         activityTitle: tabelaEvento.nome,
         activityHours: tabelaEvento.cargaHoraria,
@@ -212,6 +213,7 @@ export class CertificateRepository {
         participantName: tabelaConvidado.nome,
         participantEmail: tabelaConvidado.email,
         role: tabelaConvidadoAtividade.funcao,
+        activityId: tabelaAtividade.id,
         location: tabelaAtividade.localizacao,
         activityTitle: tabelaAtividade.nome,
         activityHours: tabelaAtividade.cargaHoraria,
@@ -255,6 +257,7 @@ export class CertificateRepository {
         participantName: tabelaUsuario.nome,
         participantEmail: tabelaUsuario.email,
         role: tabelaParticipacoes.tipo,
+        activityId: tabelaAtividade.id,
         location: tabelaAtividade.localizacao,
         activityTitle: tabelaAtividade.nome,
         activityHours: tabelaAtividade.cargaHoraria,
@@ -287,21 +290,25 @@ export class CertificateRepository {
       .where(condition);
   }
 
-  async findByEvent(eventoId: number, page: number, limit: number) {
+  async findAllByEvent(eventoId: number) {
     const [userRows, guestRows, activityRows] = await Promise.all([
       this.userCertificateQuery(eq(tabelaCertificadoEvento.eventoId, eventoId)),
       this.guestCertificateQuery(eq(tabelaAtividade.eventoId, eventoId)),
       this.activityCertificateQuery(eq(tabelaAtividade.eventoId, eventoId)),
     ]);
 
-    const offset = (page - 1) * limit;
     return [
       ...userRows.map((row) => ({ ...row, kind: 'user' as const })),
       ...guestRows.map((row) => ({ ...row, kind: 'guest' as const })),
       ...activityRows.map((row) => ({ ...row, kind: 'activity' as const })),
     ]
-      .sort((a, b) => b.dataEmissao.getTime() - a.dataEmissao.getTime())
-      .slice(offset, offset + limit);
+      .sort((a, b) => b.dataEmissao.getTime() - a.dataEmissao.getTime());
+  }
+
+  async findByEvent(eventoId: number, page: number, limit: number) {
+    const rows = await this.findAllByEvent(eventoId);
+    const offset = (page - 1) * limit;
+    return rows.slice(offset, offset + limit);
   }
 
   async findByUser(usuarioId: number, page: number, limit: number) {
