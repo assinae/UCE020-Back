@@ -49,21 +49,70 @@ export class CertificateService {
   }
 
   async getCertificateStatsByEvent(eventoId: number) {
-    const [rows, guestTotal] = await Promise.all([
-      this.repo.countByRole(eventoId),
-      this.repo.countGuestCertificatesByEvent(eventoId),
-    ]);
-    const counts = new Map(
-      rows.map((row) => [this.mapRole(row.role), row.count]),
-    );
-    // Convidados (palestrante/ministrante/moderador) não têm cards próprios na tela de
-    // certificados gerados hoje — todo convidado certificado entra no card "Palestrante".
-    counts.set('Palestrante', guestTotal);
+    const rows = await this.repo.findAllByEvent(eventoId);
+    const groups = new Map<
+      string,
+      {
+        key: string;
+        source: 'event' | 'activity';
+        activityId: number | null;
+        label: string;
+        total: number;
+        pending: number;
+        signed: number;
+        roles: Map<string, number>;
+      }
+    >();
+    groups.set('event', {
+      key: 'event',
+      source: 'event',
+      activityId: null,
+      label: 'Certificados do evento',
+      total: 0,
+      pending: 0,
+      signed: 0,
+      roles: new Map<string, number>(),
+    });
 
-    return ['Ouvinte', 'Monitor', 'Organizador', 'Palestrante'].map((role) => ({
-      role,
-      count: counts.get(role) ?? 0,
-    }));
+    for (const row of rows) {
+      const source = row.kind === 'user' ? 'event' : 'activity';
+      const activityId = source === 'activity' ? row.activityId : null;
+      const key = source === 'event' ? 'event' : `activity:${activityId}`;
+      const role = row.kind === 'guest'
+        ? this.mapGuestRole(row.role)
+        : this.mapRole(row.role);
+      const group = groups.get(key) ?? {
+        key,
+        source,
+        activityId,
+        label: source === 'event' ? 'Certificados do evento' : row.activityTitle,
+        total: 0,
+        pending: 0,
+        signed: 0,
+        roles: new Map<string, number>(),
+      };
+
+      group.total += 1;
+      group[row.assinado ? 'signed' : 'pending'] += 1;
+      group.roles.set(role, (group.roles.get(role) ?? 0) + 1);
+      groups.set(key, group);
+    }
+
+    return [...groups.values()]
+      .sort((a, b) => {
+        if (a.source !== b.source) return a.source === 'event' ? -1 : 1;
+        return a.label.localeCompare(b.label, 'pt-BR');
+      })
+      .map((group) => ({
+        key: group.key,
+        source: group.source,
+        activityId: group.activityId,
+        label: group.label,
+        total: group.total,
+        pending: group.pending,
+        signed: group.signed,
+        roles: [...group.roles.entries()].map(([role, count]) => ({ role, count })),
+      }));
   }
 
   async generateGuestCertificates(atividadeId: number, userId: number) {
@@ -286,6 +335,7 @@ export class CertificateService {
     participantName: string;
     participantEmail: string;
     role: string;
+    activityId?: number | null;
     location: string;
     activityTitle: string;
     activityHours: number | null;
@@ -300,6 +350,9 @@ export class CertificateService {
     return {
       id: `${row.kind}-${row.id}`,
       certificadoId: row.id,
+      source: row.kind === 'user' ? 'event' : 'activity',
+      activityId: row.activityId ?? undefined,
+      activityName: row.kind === 'user' ? undefined : row.activityTitle,
       title: row.activityTitle,
       participantName: row.participantName,
       participantEmail: row.participantEmail,
