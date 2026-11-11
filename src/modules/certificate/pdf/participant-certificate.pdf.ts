@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Document, Page, Text, View, Image, pdf } from '@react-pdf/renderer';
 import { streamToBuffer } from './stream-to-buffer';
-import { certificateStyles as styles } from './certificate.styles';
+import { certificateStyles as defaultStyles } from './certificate.styles';
 import { formatDate } from './format-date-range';
 import { LOGO_ASSINAE_SRC } from 'src/resources/certificatesConfig/certificate.assets';
 import { shouldRenderDefaultBranding } from './certificate-template';
@@ -24,6 +24,7 @@ export type ParticipantCertificateData = {
   assinante2Titulo?: string;
   templateUrl?: string | null;
   textos?: ParticipantCertificateTexts;
+  layoutStyles?: typeof defaultStyles;
   // Dados da assinatura digital (preenchidos no ato da assinatura).
   assinatura?: {
     nome: string;
@@ -66,6 +67,7 @@ function buildRoleVerb(
 
 function buildDocument(data: ParticipantCertificateData) {
   const e = React.createElement;
+  const styles = data.layoutStyles ?? defaultStyles;
   const certTitle =
     data.textos?.titulo?.trim() ||
     ROLE_CERT_TITLE[data.role] ||

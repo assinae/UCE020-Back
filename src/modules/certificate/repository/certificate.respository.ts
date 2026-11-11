@@ -15,6 +15,7 @@ import {
 } from 'src/db/schema';
 import { and, eq, or, sql, SQL } from 'drizzle-orm';
 import { PgTable } from 'drizzle-orm/pg-core';
+import type { CertificateLayoutSnapshot } from '../pdf/certificate-layout-snapshot';
 
 export interface EventoCertParaAssinar {
   id: number;
@@ -108,6 +109,7 @@ export interface EventoCertParaRender {
   assinadoEm: Date | null;
   assinaturaNome: string | null;
   codigoVerificacao: string | null;
+  certificadoLayoutSnapshot: CertificateLayoutSnapshot | null;
 }
 
 export interface ConvidadoCertParaRender {
@@ -133,6 +135,7 @@ export interface ConvidadoCertParaRender {
   assinadoEm: Date | null;
   assinaturaNome: string | null;
   codigoVerificacao: string | null;
+  certificadoLayoutSnapshot: CertificateLayoutSnapshot | null;
 }
 
 /** usuarioId/eventoId voltam junto porque a autorização do download depende deles. */
@@ -160,6 +163,7 @@ export interface AtividadeCertParaRender {
   assinadoEm: Date | null;
   assinaturaNome: string | null;
   codigoVerificacao: string | null;
+  certificadoLayoutSnapshot: CertificateLayoutSnapshot | null;
 }
 @Injectable()
 export class CertificateRepository {
@@ -916,6 +920,7 @@ export class CertificateRepository {
         assinadoEm: tabelaCertificadoEvento.assinadoEm,
         assinaturaNome: tabelaCertificadoEvento.assinaturaNome,
         codigoVerificacao: tabelaCertificadoEvento.codigoVerificacao,
+        certificadoLayoutSnapshot: tabelaEvento.certificadoLayoutSnapshot,
       })
       .from(tabelaCertificadoEvento)
       .innerJoin(
@@ -965,6 +970,7 @@ export class CertificateRepository {
         assinadoEm: tabelaCertificadoConvidado.assinadoEm,
         assinaturaNome: tabelaCertificadoConvidado.assinaturaNome,
         codigoVerificacao: tabelaCertificadoConvidado.codigoVerificacao,
+        certificadoLayoutSnapshot: tabelaEvento.certificadoLayoutSnapshot,
       })
       .from(tabelaCertificadoConvidado)
       .innerJoin(
@@ -1022,6 +1028,13 @@ export class CertificateRepository {
         assinadoEm: tabelaCertificadoAtividade.assinadoEm,
         assinaturaNome: tabelaCertificadoAtividade.assinaturaNome,
         codigoVerificacao: tabelaCertificadoAtividade.codigoVerificacao,
+        certificadoLayoutSnapshot: tabelaEvento.certificadoLayoutSnapshot,
+        certificadoTitulo: tabelaEvento.certificadoTitulo,
+        certificadoSubtitulo: tabelaEvento.certificadoSubtitulo,
+        certificadoDescricaoInicio: tabelaEvento.certificadoDescricaoInicio,
+        certificadoDescricaoEvento: tabelaEvento.certificadoDescricaoEvento,
+        certificadoDescricaoCargaHoraria:
+          tabelaEvento.certificadoDescricaoCargaHoraria,
       })
       .from(tabelaCertificadoAtividade)
       .innerJoin(
