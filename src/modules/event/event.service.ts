@@ -29,6 +29,7 @@ import { renderParticipantCertificatePdf } from '../certificate/pdf/participant-
 import { formatDateRange } from '../certificate/pdf/format-date-range';
 import { gerarQrPng } from '../certificate/signature/qr';
 import { urlVerificacao } from '../certificate/signature/signature-format';
+import { createCertificateLayoutSnapshot } from '../certificate/pdf/certificate-layout-snapshot';
 
 export type TipoParticipante = 'participante' | 'organizador' | 'monitor';
 
@@ -228,6 +229,11 @@ export class EventService {
 
   async create(createEventDto: CreateEventDto, userId: number) {
     await this.assertAuthenticatedUserExists(userId);
+    if (createEventDto.status === 'finalizada') {
+      throw new BadRequestException(
+        'Crie o evento em aberto e use a ação Finalizar Evento para encerrá-lo.',
+      );
+    }
 
     const codigo =
       createEventDto.codigo?.trim() ||
@@ -489,6 +495,12 @@ export class EventService {
       );
     }
 
+    if (updateEventDto.status === 'finalizada') {
+      throw new BadRequestException(
+        'Use a ação Finalizar Evento para encerrar o evento e suas atividades.',
+      );
+    }
+
     await assertEventOrganizer(userId, eventoExistente.id);
 
     const {
@@ -717,19 +729,39 @@ export class EventService {
       throw new BadRequestException('Evento já está finalizado.');
     }
 
-    const [eventoAtualizado] = await db
-      .update(tabelaEvento)
-      .set({ status: 'finalizada' })
-      .where(eq(tabelaEvento.id, id))
-      .returning();
+    const eventoAtualizado = await db.transaction(async (tx) => {
+      const [eventoParaFinalizar] = await tx
+        .select()
+        .from(tabelaEvento)
+        .where(eq(tabelaEvento.id, id))
+        .for('update');
 
-    // Finaliza em cascata as atividades do evento — hoje é a única forma de uma
-    // atividade chegar a 'finalizada', necessário para liberar a emissão de
-    // certificado de convidado (ver CertificateService.generateGuestCertificates).
-    await db
-      .update(tabelaAtividade)
-      .set({ status: 'finalizada' })
-      .where(eq(tabelaAtividade.eventoId, id));
+      if (!eventoParaFinalizar) {
+        throw new NotFoundException(`Evento com ID ${id} não encontrado.`);
+      }
+      if (eventoParaFinalizar.status === 'finalizada') {
+        throw new BadRequestException('Evento já está finalizado.');
+      }
+
+      const certificadoLayoutSnapshot = createCertificateLayoutSnapshot(
+        eventoParaFinalizar,
+      );
+      const [updated] = await tx
+        .update(tabelaEvento)
+        .set({ status: 'finalizada', certificadoLayoutSnapshot })
+        .where(eq(tabelaEvento.id, id))
+        .returning();
+
+      // Finaliza em cascata as atividades do evento — hoje é a única forma de uma
+      // atividade chegar a 'finalizada', necessário para liberar a emissão de
+      // certificado de convidado. Mantém os status consistentes se uma escrita falhar.
+      await tx
+        .update(tabelaAtividade)
+        .set({ status: 'finalizada' })
+        .where(eq(tabelaAtividade.eventoId, id));
+
+      return updated;
+    });
 
     return {
       message: 'Evento finalizado com sucesso.',
@@ -842,6 +874,7 @@ export class EventService {
     requesterId: number,
   ) {
     await this.checkIsOrganizer(eventId, requesterId);
+    await this.assertEventNotFinalized(eventId);
 
     const [participacaoExistente] = await db
       .select()
@@ -881,6 +914,7 @@ export class EventService {
     requesterId: number,
   ) {
     await this.checkIsOrganizer(eventId, requesterId);
+    await this.assertEventNotFinalized(eventId);
 
     // Não permitir que o organizador se remova caso seja o único organizador (opcional, mas recomendado evitar se remover sem querer)
     // Para simplificar a task, apenas processamos a remoção básica:
@@ -912,5 +946,22 @@ export class EventService {
       message: 'Membro removido do evento com sucesso.',
       data: participacaoExistente,
     };
+  }
+
+  private async assertEventNotFinalized(eventId: number) {
+    const [event] = await db
+      .select({ status: tabelaEvento.status })
+      .from(tabelaEvento)
+      .where(eq(tabelaEvento.id, eventId))
+      .limit(1);
+
+    if (!event) {
+      throw new NotFoundException('Evento não encontrado.');
+    }
+    if (event.status === 'finalizada') {
+      throw new BadRequestException(
+        'Não é possível alterar participantes de um evento já finalizado.',
+      );
+    }
   }
 }

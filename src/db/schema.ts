@@ -9,7 +9,9 @@ import {
   boolean,
   index,
   uniqueIndex,
+  jsonb,
 } from 'drizzle-orm/pg-core';
+import type { CertificateLayoutSnapshot } from 'src/modules/certificate/pdf/certificate-layout-snapshot';
 
 //Criação das Tabelas no Banco de Dados utilizando Drizzle ORM
 
@@ -29,7 +31,6 @@ export const categoriaAtividadeEnum = pgEnum('categoria_atividade', [
 ]);
 export const statusEnum = pgEnum('status', [
   'pendente',
-  'iniciada',
   'andamento',
   'finalizada',
 ]);
@@ -89,6 +90,7 @@ export const tabelaEvento = pgTable('evento', {
   certificadoDescricaoInicio: text('certificado_descricao_inicio'),
   certificadoDescricaoEvento: text('certificado_descricao_evento'),
   certificadoDescricaoCargaHoraria: text('certificado_descricao_carga_horaria'),
+  certificadoLayoutSnapshot: jsonb('certificado_layout_snapshot').$type<CertificateLayoutSnapshot>(),
   assinante1Nome: text('assinante1_nome'),
   assinante1Titulo: text('assinante1_titulo'),
   assinante2Nome: text('assinante2_nome'),
