@@ -5,7 +5,7 @@ import {
   BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { db } from '../../db';
 import {
   tabelaEvento,
@@ -347,7 +347,19 @@ export class EventService {
 
   async findByCodigo(codigo: string) {
     const [evento] = await db
-      .select()
+      .select({
+        id: tabelaEvento.id,
+        nome: tabelaEvento.nome,
+        codigo: tabelaEvento.codigo,
+        descricao: tabelaEvento.descricao,
+        localizacao: tabelaEvento.localizacao,
+        responsavel: tabelaEvento.responsavel,
+        cargaHoraria: tabelaEvento.cargaHoraria,
+        dataInicio: tabelaEvento.dataInicio,
+        dataFim: tabelaEvento.dataFim,
+        status: tabelaEvento.status,
+        foto: tabelaEvento.foto,
+      })
       .from(tabelaEvento)
       .where(eq(tabelaEvento.codigo, codigo))
       .limit(1);
@@ -367,9 +379,35 @@ export class EventService {
       .from(tabelaParticipacoes)
       .where(eq(tabelaParticipacoes.eventoId, evento.id));
 
+    const atividades = await db.query.tabelaAtividade.findMany({
+      where: eq(tabelaAtividade.eventoId, evento.id),
+      orderBy: [asc(tabelaAtividade.dataInicio), asc(tabelaAtividade.id)],
+      with: {
+        convidados: {
+          with: { convidado: { columns: { nome: true } } },
+        },
+      },
+    });
+
+    const atividadesPublicas = atividades.map((atividade) => ({
+      id: atividade.id,
+      name: atividade.nome,
+      description: atividade.descricao,
+      location: atividade.localizacao,
+      category: atividade.categoria,
+      workload: atividade.cargaHoraria,
+      startDate: atividade.dataInicio,
+      endDate: atividade.dataFim,
+      status: atividade.status,
+      guests: atividade.convidados.map((vinculo) => ({
+        name: vinculo.convidado.nome,
+        role: vinculo.funcao,
+      })),
+    }));
+
     return {
       message: 'Evento encontrado.',
-      data: { ...evento, totalInscritos },
+      data: { ...evento, totalInscritos, atividades: atividadesPublicas },
     };
   }
 
