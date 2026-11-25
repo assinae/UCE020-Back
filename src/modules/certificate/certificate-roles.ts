@@ -1,5 +1,5 @@
 const PARTICIPANTE: Record<string, string> = {
-  participante: 'Ouvinte',
+  participante: 'Participante',
   monitor: 'Monitor',
   organizador: 'Organizador',
 };

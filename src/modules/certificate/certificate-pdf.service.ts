@@ -101,7 +101,7 @@ export class CertificatePdfService {
     const dados = {
       certificateId: cert.id,
       participantName: cert.participantName,
-      role: ({ participante: 'Ouvinte', monitor: 'Monitor', organizador: 'Organizador' } as Record<string, string>)[cert.role.toLowerCase()] ?? cert.role,
+      role: ({ participante: 'Participante', monitor: 'Monitor', organizador: 'Organizador' } as Record<string, string>)[cert.role.toLowerCase()] ?? cert.role,
       eventName: cert.eventName,
       workloadHours: cert.workloadHours,
       location: cert.location,
@@ -211,7 +211,7 @@ export class CertificatePdfService {
     const dados = {
       certificateId: cert.id,
       participantName: cert.participantName,
-      role: ({ participante: 'Ouvinte', monitor: 'Monitor', organizador: 'Organizador' } as Record<string, string>)[cert.role.toLowerCase()] ?? cert.role,
+      role: ({ participante: 'Participante', monitor: 'Monitor', organizador: 'Organizador' } as Record<string, string>)[cert.role.toLowerCase()] ?? cert.role,
       // renderParticipantCertificatePdf só tem um campo de "nome do contexto" —
       // pra atividade, o certificado é sobre a atividade, não o evento inteiro.
       eventName: cert.activityName,

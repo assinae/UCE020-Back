@@ -43,7 +43,7 @@ export type ParticipantCertificateTexts = {
 };
 
 const ROLE_CERT_TITLE: Record<string, string> = {
-  Ouvinte: 'CERTIFICADO DE PARTICIPAÇÃO',
+  Participante: 'CERTIFICADO DE PARTICIPAÇÃO',
   Monitor: 'CERTIFICADO DE MONITORIA',
   Organizador: 'CERTIFICADO DE ORGANIZAÇÃO',
 };
@@ -57,12 +57,12 @@ function buildRoleVerb(
   const article = contextLabel === 'atividade' ? 'na' : 'no';
 
   const verbs: Record<string, string> = {
-    Ouvinte: `participou ${preposition} ${label}`,
+    Participante: `participou ${preposition} ${label}`,
     Monitor: `atuou como monitor ${article} ${label}`,
     Organizador: `atuou como organizador ${preposition} ${label}`,
   };
 
-  return verbs[role] ?? verbs.Ouvinte;
+  return verbs[role] ?? verbs.Participante;
 }
 
 function buildDocument(data: ParticipantCertificateData) {

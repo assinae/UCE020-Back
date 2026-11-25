@@ -199,7 +199,7 @@ export class EventService {
     return renderParticipantCertificatePdf({
       certificateId: 0,
       participantName: 'Nome do participante',
-      role: 'Ouvinte',
+      role: 'Participante',
       eventName: dto.evento.nome,
       workloadHours: dto.evento.cargaHoraria,
       location: dto.evento.localizacao,
@@ -781,9 +781,8 @@ export class EventService {
         throw new BadRequestException('Evento já está finalizado.');
       }
 
-      const certificadoLayoutSnapshot = createCertificateLayoutSnapshot(
-        eventoParaFinalizar,
-      );
+      const certificadoLayoutSnapshot =
+        createCertificateLayoutSnapshot(eventoParaFinalizar);
       const [updated] = await tx
         .update(tabelaEvento)
         .set({ status: 'finalizada', certificadoLayoutSnapshot })
