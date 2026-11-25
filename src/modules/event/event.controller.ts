@@ -276,7 +276,10 @@ export class EventController {
 
   @Get('codigo/:codigo')
   @ApiOperation({ summary: 'Buscar evento pelo código (ex: SCM2025)' })
-  @ApiResponse({ status: 200, description: 'Evento encontrado' })
+  @ApiResponse({
+    status: 200,
+    description: 'Evento encontrado, com a programação pública (sem e-mails)',
+  })
   @ApiResponse({ status: 404, description: 'Evento não encontrado' })
   async findByCodigo(@Param('codigo') codigo: string) {
     return await this.eventService.findByCodigo(codigo);
